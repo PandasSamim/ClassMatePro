@@ -1,41 +1,117 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Below are the colors that are used in the app.
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    // Brand Colors
+    primary: '#003fb1',
+    onPrimary: '#ffffff',
+    primaryContainer: '#1a56db',
+    onPrimaryContainer: '#d4dcff',
+    inversePrimary: '#b5c4ff',
+    primaryFixed: '#dbe1ff',
+    onPrimaryFixed: '#00174d',
+    
+    secondary: '#006c4b',
+    onSecondary: '#ffffff',
+    secondaryContainer: '#96f6c8',
+    onSecondaryContainer: '#00734f',
+    
+    tertiary: '#5e00cd',
+    onTertiary: '#ffffff',
+    tertiaryContainer: '#e6d7ff',
+    onTertiaryContainer: '#25005a',
+
+    error: '#ba1a1a',
+    onError: '#ffffff',
+    errorContainer: '#ffdad6',
+    onErrorContainer: '#93000a',
+
+    // Background & Surfaces
+    background: '#f8f9fa',
+    onBackground: '#191c1d',
+    surface: '#f8f9fa',
+    onSurface: '#191c1d',
+    surfaceVariant: '#e1e3e4',
+    onSurfaceVariant: '#434654',
+    
+    surfaceContainerLowest: '#ffffff',
+    surfaceContainerLow: '#f3f4f5',
+    surfaceContainer: '#edeeef',
+    surfaceContainerHigh: '#e7e8e9',
+    surfaceContainerHighest: '#e1e3e4',
+    
+    // Outlines
+    outline: '#737686',
+    outlineVariant: '#c3c5d7',
+
+    // Legacy properties for expo-router tab bar
+    text: '#191c1d',
+    tint: '#1a56db',
+    icon: '#434654',
+    tabIconDefault: '#434654',
+    tabIconSelected: '#1a56db',
   },
   dark: {
-    text: '#ECEDEE',
+    // Brand Colors (Fallback to light mode tokens for now to satisfy TS)
+    primary: '#003fb1',
+    onPrimary: '#ffffff',
+    primaryContainer: '#1a56db',
+    onPrimaryContainer: '#d4dcff',
+    inversePrimary: '#b5c4ff',
+    primaryFixed: '#dbe1ff',
+    onPrimaryFixed: '#00174d',
+    
+    secondary: '#006c4b',
+    onSecondary: '#ffffff',
+    secondaryContainer: '#96f6c8',
+    onSecondaryContainer: '#00734f',
+    
+    tertiary: '#5e00cd',
+    onTertiary: '#ffffff',
+    tertiaryContainer: '#e6d7ff',
+    onTertiaryContainer: '#25005a',
+
+    error: '#ba1a1a',
+    onError: '#ffffff',
+    errorContainer: '#ffdad6',
+    onErrorContainer: '#93000a',
+
+    // Background & Surfaces (Using dark stubs where possible)
     background: '#151718',
-    tint: tintColorDark,
+    onBackground: '#ECEDEE',
+    surface: '#151718',
+    onSurface: '#ECEDEE',
+    surfaceVariant: '#2e3132',
+    onSurfaceVariant: '#c3c5d7',
+    
+    surfaceContainerLowest: '#000000',
+    surfaceContainerLow: '#151718',
+    surfaceContainer: '#191c1d',
+    surfaceContainerHigh: '#2e3132',
+    surfaceContainerHighest: '#434654',
+    
+    // Outlines
+    outline: '#737686',
+    outlineVariant: '#434654',
+
+    // Legacy properties for expo-router tab bar
+    text: '#ECEDEE',
+    tint: '#b5c4ff',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: '#b5c4ff',
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -43,11 +119,5 @@ export const Fonts = Platform.select({
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });

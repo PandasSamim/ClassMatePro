@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Update Fees</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&amp;family=Public+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#2e3132",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#1a56db",
+                        "on-surface": "#191c1d",
+                        "on-background": "#191c1d",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "background": "#f8f9fa",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#d2bbff",
+                        "inverse-primary": "#b5c4ff",
+                        "on-primary-fixed-variant": "#003dab",
+                        "on-primary-container": "#d4dcff",
+                        "on-tertiary-fixed-variant": "#5a00c6",
+                        "tertiary-container": "#7730eb",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#005137",
+                        "primary-fixed": "#dbe1ff",
+                        "on-secondary-fixed": "#002114",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#edeeef",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-low": "#f3f4f5",
+                        "primary": "#003fb1",
+                        "primary-fixed-dim": "#b5c4ff",
+                        "secondary-fixed": "#96f6c8",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#00734f",
+                        "secondary": "#006c4b",
+                        "tertiary-fixed": "#eaddff",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary-fixed": "#25005a",
+                        "on-surface-variant": "#434654",
+                        "surface": "#f8f9fa",
+                        "on-tertiary-container": "#e6d7ff",
+                        "tertiary": "#5e00cd",
+                        "surface-tint": "#1353d8",
+                        "on-primary-fixed": "#00174d",
+                        "secondary-fixed-dim": "#7ad9ad",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary-container": "#96f6c8",
+                        "surface-bright": "#f8f9fa",
+                        "surface-container-highest": "#e1e3e4",
+                        "outline": "#737686",
+                        "inverse-on-surface": "#f0f1f2",
+                        "outline-variant": "#c3c5d7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "base": "8px",
+                        "xl": "64px",
+                        "margin": "32px",
+                        "lg": "40px",
+                        "gutter": "24px",
+                        "sm": "12px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Public Sans"],
+                        "headline-lg": ["Lexend"],
+                        "body-lg": ["Public Sans"],
+                        "label-md": ["Public Sans"],
+                        "headline-xl": ["Lexend"],
+                        "headline-md": ["Lexend"],
+                        "body-md": ["Public Sans"],
+                        "body-sm": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["10px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "headline-lg": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-xl": ["36px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center w-full px-4 h-16 sticky top-0 z-40">
+<button class="mr-4 text-on-surface hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors p-2 rounded-full active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-lexend tracking-tight font-headline-md text-headline-md text-gray-900 dark:text-white flex-1">Update Fees</h1>
+</header>
+<main class="max-w-4xl mx-auto px-4 py-md lg:py-lg grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Student Context Area -->
+<div class="md:col-span-12 mb-sm flex items-center gap-4">
+<img alt="Sarah Jenkins" class="w-16 h-16 rounded-full object-cover border border-outline-variant shadow-sm" data-alt="A professional headshot of a young female student, Sarah Jenkins, smiling slightly. The background is a soft, blurred light gray, fitting a modern academic portal aesthetic. The lighting is bright and even, highlighting a corporate but approachable mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD2C8l2AG9kBsFCyVhJXD4VfDRGxDPA35Y7EIf_UUoot7qU2Foc0R_e6OruKLipU-yQZLbA2aoibQRM6kvVfTlxaKiXE_xc2PBvm2RgR22ykNIbbPzzd_Zmd8E5eK-hwzlNg4qVtjdCCa3vy3U5LeGxGSH9IPmp3SNj5iASbR86d931G_SdvICRpoYgpkzcNOfg8Hj_tkrtPeS70EKf4Aak6RZ7WZjwAofyIqv7eiwnMcCxHks3QbPAqzJhCmd64wiBrfFNNdO-mY"/>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface m-0 p-0">Sarah Jenkins</h2>
+<p class="font-body-md text-body-md text-on-surface-variant m-0 p-0 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">school</span> Grade 10 - Science Stream
+                </p>
+</div>
+</div>
+<!-- Current Fee Card -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-md border border-outline-variant shadow-[0_4px_12px_rgba(0,0,0,0.04)] h-full flex flex-col justify-center">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase mb-2">Current Monthly Fee</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-primary">$450.00</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ month</span>
+</div>
+<div class="mt-4 pt-4 border-t border-surface-variant">
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[16px]">check_circle</span> Active Billing
+                </p>
+</div>
+</div>
+<!-- Adjustment Form Area -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-xl p-md border border-outline-variant shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-md">Fee Adjustment</h3>
+<div class="space-y-6">
+<!-- New Amount Input -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2" for="new_amount">Enter New Amount</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant font-body-lg">$</span>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary focus:ring-0 pl-8 pr-4 py-3 rounded-t-DEFAULT font-body-lg text-body-lg text-on-surface transition-colors placeholder-outline" id="new_amount" placeholder="0.00" type="number"/>
+</div>
+</div>
+<!-- Fee Rules & Waivers -->
+<div class="pt-sm border-t border-surface-variant">
+<h4 class="font-label-md text-label-md text-on-surface-variant uppercase mb-4">Fee Rules &amp; Waivers</h4>
+<label class="flex items-center gap-3 cursor-pointer group mb-4">
+<div class="relative flex items-center justify-center w-5 h-5 rounded border border-outline-variant bg-surface-container-lowest group-hover:border-primary transition-colors">
+<input class="peer sr-only" type="checkbox"/>
+<span class="material-symbols-outlined icon-fill text-[16px] text-primary opacity-0 peer-checked:opacity-100 transition-opacity absolute">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface">Apply Low Attendance Waiver (-10%)</span>
+</label>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2" for="special_notes">Special Notes</label>
+<textarea class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-4 py-3 rounded-t-DEFAULT font-body-sm text-body-sm text-on-surface transition-colors placeholder-outline resize-none" id="special_notes" placeholder="Reason for adjustment..." rows="3"></textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Section -->
+<div class="md:col-span-12 bg-surface-container-low rounded-xl p-md border border-outline-variant mt-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h4 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Effective From</h4>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Next Billing Cycle (Oct 1, 2024)</p>
+</div>
+<div class="text-left md:text-right">
+<h4 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Estimated New Total</h4>
+<p class="font-headline-md text-headline-md text-primary">Pending Input</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Transactional Context) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+<button class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 px-6 py-2 hover:text-blue-600 dark:hover:text-blue-300 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1" data-icon="close">close</span>
+<span class="font-lexend text-xs font-medium">Cancel</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-xl px-6 py-2 hover:text-blue-600 dark:hover:text-blue-300 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined mb-1 icon-fill" data-icon="check_circle">check_circle</span>
+<span class="font-lexend text-xs font-medium">Confirm Adjustment</span>
+</button>
+</nav>
+</body></html>
