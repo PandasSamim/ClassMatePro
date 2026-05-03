@@ -7,23 +7,22 @@
     "icon": "./assets/images/ClassMatePro.png",
     "scheme": "classmatepro",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.samim123ali.classmatepro",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/ClassMatePro.png",
+        "backgroundColor": "#E6F4FE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/ClassMatePro.png"
     },
     "plugins": [
       "expo-router",
@@ -45,8 +44,14 @@
       "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "00282633-73eb-4b0f-8959-1136e519e673"
+      }
+    },
+    "owner": "samim123ali"
   }
 }
