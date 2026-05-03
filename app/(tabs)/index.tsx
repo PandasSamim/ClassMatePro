@@ -13,7 +13,7 @@ import { useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
-import { useSettings } from '@/hooks/useSettings';
+import { useGlobalSettings } from '@/context/SettingsContext';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
@@ -25,13 +25,12 @@ function DashboardScreen() {
   const [isFilterVisible, setFilterVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState<{year: number, month: number} | null>(null);
   const { metrics, chartData, attendanceBreakdown, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
-  const { settings, fetchSettings } = useSettings();
+  const { settings } = useGlobalSettings();
  
   useFocusEffect(
     useCallback(() => {
       fetchMetrics(undefined, activeFilter?.year, activeFilter?.month);
-      fetchSettings();
-    }, [fetchMetrics, fetchSettings, activeFilter])
+    }, [fetchMetrics, activeFilter])
   );
  
   const handleApplyFilter = (year: number | undefined, month: number | undefined) => {
