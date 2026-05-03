@@ -1,118 +1,281 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, StatusBar, Image } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+// Location: ClassMatePro/app/student/[id].tsx
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRouter, useLocalSearchParams, Stack, useFocusEffect } from 'expo-router';
-import { useStudents, Student } from '@/hooks/useStudents';
+import { useAttendance } from '@/hooks/useAttendance';
 import { useFees } from '@/hooks/useFees';
-import { useCallback, useState } from 'react';
+import { useResults } from '@/hooks/useResults';
+import { Student, useStudents } from '@/hooks/useStudents';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Image, Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { BarChart } from 'react-native-gifted-charts';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function StudentProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const { id, name } = useLocalSearchParams();
+  const { id, name, avatarUrl } = useLocalSearchParams();
 
   const { fetchStudentById } = useStudents();
-  const { fees, fetchFeesByStudent } = useFees();
+  const { fees, calculateFees, processPayment } = useFees();
+  const { fetchStudentStats } = useAttendance();
+  const { results, fetchResultsByStudent } = useResults();
   const [student, setStudent] = useState<Student | null>(null);
+  const [stats, setStats] = useState({ present: 0, total: 0 });
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
+  // Payment Modal State
+  const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedFee, setSelectedFee] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+
+  const handleOpenPayment = (fee: any) => {
+    setSelectedFee(fee);
+    setPaymentAmount(fee.due_amount.toString());
+    setPaymentModalVisible(true);
+  };
+
+  const handleMakePayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
+      return;
+    }
+
+    if (amount > selectedFee.due_amount) {
+      Alert.alert('Overpayment', 'Amount exceeds the remaining due balance.');
+      return;
+    }
+
+    const success = await processPayment(selectedFee.id, amount);
+    if (success) {
+      setPaymentModalVisible(false);
+      Alert.alert('Payment Successful', `Processed ₹${amount} for ${selectedFee.month}.`);
+    } else {
+      Alert.alert('Error', 'Payment processing failed.');
+    }
+  };
+
+  const fetchMonthlyStats = useCallback(async (date: Date) => {
+    if (!id) return;
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+    const newStats = await fetchStudentStats(Number(id), startOfMonth, endOfMonth);
+    setStats(newStats);
+  }, [id, fetchStudentStats]);
+
+  const hasCalculatedRef = useRef<number | null>(null);
   useFocusEffect(
     useCallback(() => {
       if (id) {
-        fetchStudentById(Number(id)).then(setStudent);
-        fetchFeesByStudent(Number(id));
+        const studentId = Number(id);
+        fetchStudentById(studentId).then(setStudent);
+        fetchResultsByStudent(studentId);
+
+        // Only calculate fees once per student per focus session
+        if (hasCalculatedRef.current !== studentId) {
+          calculateFees(studentId).then(() => {
+            hasCalculatedRef.current = studentId;
+          });
+        }
       }
-    }, [id])
+
+      return () => {
+        // Optional: clear on blur if you want it to recalculate next time
+        // hasCalculatedRef.current = null;
+      };
+    }, [id, calculateFees, fetchStudentById])
   );
 
-  const studentName = student ? `${student.first_name} ${student.last_name}` : (name ? String(name) : 'Loading...');
+  // Separate effect for attendance stats that responds to month navigation
+  useEffect(() => {
+    if (id) {
+      fetchMonthlyStats(selectedMonth);
+    }
+  }, [id, selectedMonth, fetchMonthlyStats]);
+
+  const navigateMonth = (direction: number) => {
+    const newDate = new Date(selectedMonth);
+    newDate.setMonth(newDate.getMonth() + direction);
+    
+    // Don't allow going to future months
+    const today = new Date();
+    if (newDate > new Date(today.getFullYear(), today.getMonth(), 1)) {
+      return;
+    }
+    
+    setSelectedMonth(newDate);
+  };
+
+  const isCurrentMonth = useMemo(() => {
+    const today = new Date();
+    return selectedMonth.getFullYear() === today.getFullYear() && 
+           selectedMonth.getMonth() === today.getMonth();
+  }, [selectedMonth]);
+
+  const studentName = student ? `${student.first_name} ${student.last_name}` : (name ? String(name) : 'Student');
+  const attendanceRate = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
+
+  const resultChartData = useMemo(() => {
+    const units = ['First Unit', 'Second Unit', 'Final Result'];
+    return units.map(unit => {
+      const unitResults = results.filter(r => r.term === unit);
+      if (unitResults.length === 0) return { label: unit, value: 0 };
+
+      const obtained = unitResults.reduce((sum, r) => sum + r.marks, 0);
+      const total = unitResults.reduce((sum, r) => sum + r.total_marks, 0);
+      const percentage = (obtained / total) * 100;
+
+      return {
+        label: unit,
+        value: Math.round(percentage),
+        frontColor: unit === 'Final Result' ? colors.primary : colors.secondary,
+      };
+    });
+  }, [results, colors]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      
-      {/* Header Actions */}
-      <View style={[styles.topActions, { backgroundColor: colors.background }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.outline} />
-          <Text style={[styles.backText, { color: colors.outline }]}>Back to Students</Text>
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+
+      {/* Header */}
+      <Animated.View
+        entering={FadeInUp.duration(600).springify()}
+        style={[styles.header, {
+          backgroundColor: colors.surfaceContainerLowest,
+          borderBottomColor: colors.surfaceVariant,
+          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 20
+        }]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+          <MaterialIcons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant }]}>
-            <MaterialIcons name="edit" size={16} color={colors.onSurface} />
-            <Text style={[styles.editButtonText, { color: colors.onSurface }]}>Edit</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Student Profile</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.onSurfaceVariant }]}>{studentName}</Text>
+        </View>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.actionIcon, { backgroundColor: colors.surfaceContainerHigh }]}
+            onPress={() => router.push({ pathname: '/add-student', params: { id } })}
+          >
+            <MaterialIcons name="edit" size={20} color={colors.onSurface} />
           </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.messageButton, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.messageButtonText, { color: colors.onPrimary }]}>Message</Text>
+
+          <TouchableOpacity
+            style={[styles.actionIcon, { backgroundColor: colors.secondaryContainer, marginLeft: 12 }]}
+            onPress={() => router.push({ pathname: '/student/[id]/results', params: { id, name: studentName } })}
+          >
+            <MaterialIcons name="assessment" size={20} color={colors.onSecondaryContainer} />
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+
         {/* Profile Header Card */}
-        <View style={[styles.profileCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-          <View style={styles.profileHeaderContent}>
-            <View style={[styles.avatar, { backgroundColor: colors.surfaceVariant, borderColor: colors.surfaceContainerHighest }]}>
-              {student?.avatar_url ? (
-                <Image 
-                  source={{ uri: student.avatar_url }} 
-                  style={styles.avatarImage} 
-                />
-              ) : (
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialIcons name="person" size={48} color={colors.outline} />
+        <View style={[styles.profileCard, { padding: 0, overflow: 'hidden', borderWidth: 0 }]}>
+          <LinearGradient
+            colors={['#1e3a8a', '#1e40af', '#3b82f6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 24 }}
+          >
+            <View style={styles.profileHeaderContent}>
+              <View style={[styles.avatar, { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)' }]}>
+                {student?.avatar_url || avatarUrl ? (
+                  <Image
+                    source={{ uri: (student?.avatar_url || String(avatarUrl)) }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialIcons name="person" size={48} color="white" />
+                  </View>
+                )}
+              </View>
+              <View style={styles.profileInfo}>
+                {/* 1. Full Name */}
+                <Text style={[styles.studentName, { color: 'white', marginBottom: 6, textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }]}>
+                  {studentName}
+                </Text>
+
+                {/* 2. Enroll Tag */}
+                <View style={[styles.statusBadge, { backgroundColor: '#fcd34d', alignSelf: 'flex-start', marginBottom: 16 }]}>
+                  <Text style={[styles.statusText, { color: '#78350f', fontWeight: '900' }]}>
+                    {student?.status?.toUpperCase() || 'ENROLLED'}
+                  </Text>
                 </View>
-              )}
-            </View>
-            <View style={styles.profileInfo}>
-              <View style={styles.nameRow}>
-                <Text style={[styles.studentName, { color: colors.onSurface }]}>{studentName}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: colors.primaryFixed }]}>
-                  <Text style={[styles.statusText, { color: colors.onPrimaryFixed }]}>Active</Text>
+
+                {/* 3, 4, 5. Class, ID, Number */}
+                <View style={[styles.detailsGrid, { flexDirection: 'column', gap: 10 }]}>
+                  <View style={styles.detailItemSimple}>
+                    <View style={[styles.smallIconBg, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                      <MaterialIcons name="class" size={14} color="#34d399" />
+                    </View>
+                    <Text style={[styles.detailTextSimple, { color: 'rgba(255,255,255,0.9)' }]}>{student?.class_name || 'Class'}</Text>
+                  </View>
+                  <View style={styles.detailItemSimple}>
+                    <View style={[styles.smallIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                      <MaterialIcons name="badge" size={14} color="#60a5fa" />
+                    </View>
+                    <Text style={[styles.detailTextSimple, { color: 'rgba(255,255,255,0.9)' }]}>
+                      ID: {`CMP#${new Date().getFullYear().toString().slice(-2)}-${String(student?.id).padStart(3, '0')}`}
+                    </Text>
+                  </View>
+                  <View style={styles.detailItemSimple}>
+                    <View style={[styles.smallIconBg, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                      <MaterialIcons name="call" size={14} color="#fbbf24" />
+                    </View>
+                    <Text style={[styles.detailTextSimple, { color: 'rgba(255,255,255,0.9)' }]}>{student?.phone || 'No Phone'}</Text>
+                  </View>
                 </View>
               </View>
-              
-              <View style={styles.detailsGrid}>
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="class" size={16} color={colors.outline} />
-                  <Text style={[styles.detailText, { color: colors.onSurfaceVariant }]}>{student?.class_name || 'Loading...'}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="badge" size={16} color={colors.outline} />
-                  <Text style={[styles.detailText, { color: colors.onSurfaceVariant }]}>ID: STU-2023-{student?.id}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="call" size={16} color={colors.outline} />
-                  <Text style={[styles.detailText, { color: colors.onSurfaceVariant }]}>{student?.phone || 'N/A'}</Text>
-                </View>
-              </View>
             </View>
-          </View>
+          </LinearGradient>
         </View>
 
         {/* Bento Grid */}
         <View style={styles.bentoGrid}>
-          
+
           {/* Left Column Equivalent */}
           <View style={styles.leftCol}>
             {/* Attendance Stats Card */}
             <View style={[styles.card, styles.attendanceCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant, borderTopColor: colors.secondary }]}>
-              <View style={styles.cardHeader}>
-                <MaterialIcons name="fact-check" size={24} color={colors.secondary} />
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Attendance Overview</Text>
+              <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <MaterialIcons name="fact-check" size={24} color={colors.secondary} />
+                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Attendance</Text>
+                </View>
+
+                <View style={styles.monthNavigator}>
+                  <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navBtn}>
+                    <MaterialIcons name="chevron-left" size={20} color={colors.onSurfaceVariant} />
+                  </TouchableOpacity>
+                  <Text style={[styles.monthLabel, { color: colors.onSurface }]}>
+                    {selectedMonth.toLocaleString('default', { month: 'short' })}
+                  </Text>
+                  <TouchableOpacity 
+                    onPress={() => navigateMonth(1)} 
+                    style={[styles.navBtn, isCurrentMonth && { opacity: 0.3 }]}
+                    disabled={isCurrentMonth}
+                  >
+                    <MaterialIcons name="chevron-right" size={20} color={colors.onSurfaceVariant} />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={[styles.cardSubtitle, { color: colors.outline }]}>CURRENT SEMESTER</Text>
-              
+              <Text style={[styles.cardSubtitle, { color: colors.outline }]}>
+                {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' }).toUpperCase()}
+              </Text>
+
               <View style={styles.rateRow}>
-                <Text style={[styles.rateValue, { color: colors.secondary }]}>92%</Text>
+                <Text style={[styles.rateValue, { color: colors.secondary }]}>{attendanceRate}%</Text>
                 <Text style={[styles.rateLabel, { color: colors.onSurfaceVariant }]}>Present Rate</Text>
               </View>
 
@@ -122,14 +285,14 @@ export default function StudentProfileScreen() {
                     <View style={[styles.dot, { backgroundColor: colors.secondary }]} />
                     <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>Present</Text>
                   </View>
-                  <Text style={[styles.statValue, { color: colors.onSurface }]}>46 Days</Text>
+                  <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.present} Days</Text>
                 </View>
                 <View style={[styles.statRow, { backgroundColor: colors.surface }]}>
                   <View style={styles.statLabelRow}>
                     <View style={[styles.dot, { backgroundColor: colors.error }]} />
                     <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>Absent</Text>
                   </View>
-                  <Text style={[styles.statValue, { color: colors.onSurface }]}>4 Days</Text>
+                  <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.total - stats.present} Days</Text>
                 </View>
               </View>
             </View>
@@ -146,6 +309,47 @@ export default function StudentProfileScreen() {
                 <Text style={[styles.guardianValue, { color: colors.onSurfaceVariant }]}>{student?.guardian_phone || 'N/A'}</Text>
               </View>
             </View>
+
+            {/* Academic Overview Chart */}
+            <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant, borderTopColor: colors.primary }]}>
+              <View style={[styles.cardHeader, { marginBottom: 20 }]}>
+                <MaterialIcons name="analytics" size={24} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Academic Overview</Text>
+              </View>
+
+              <View style={styles.chartContainer}>
+                <BarChart
+                  data={resultChartData}
+                  barWidth={40}
+                  noOfSections={4}
+                  maxValue={100}
+                  stepValue={25}
+                  barBorderRadius={8}
+                  isAnimated
+                  animationDuration={800}
+                  yAxisThickness={0}
+                  xAxisThickness={0}
+                  hideRules
+                  yAxisTextStyle={{ color: colors.outline, fontSize: 10 }}
+                  xAxisLabelTextStyle={{ color: colors.outline, fontSize: 9, textAlign: 'center' }}
+                  backgroundColor="transparent"
+                  spacing={30}
+                  disableScroll={true}
+                  initialSpacing={15}
+                />
+              </View>
+
+              <View style={styles.chartLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.secondary }]} />
+                  <Text style={[styles.legendText, { color: colors.onSurfaceVariant }]}>Units</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.legendText, { color: colors.onSurfaceVariant }]}>Final Result</Text>
+                </View>
+              </View>
+            </View>
           </View>
 
           {/* Right Column Equivalent: Payment History */}
@@ -156,13 +360,16 @@ export default function StudentProfileScreen() {
                   <MaterialIcons name="account-balance-wallet" size={24} color={colors.primary} />
                   <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Payment History</Text>
                 </View>
-                <Text style={[styles.cardSubtitle, { color: colors.outline, marginTop: 4 }]}>2023-2024 ACADEMIC YEAR</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.outline, marginTop: 4 }]}>{new Date().getFullYear()}-{new Date().getFullYear() + 1} ACADEMIC YEAR</Text>
               </View>
-              <TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => router.push(`/student/payment-history/${id}`)}
+                style={[styles.viewAllButton, { backgroundColor: `${colors.primary}10`, borderColor: colors.primary }]}
+              >
                 <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={[styles.infoBanner, { backgroundColor: colors.surface, borderBottomColor: colors.surfaceVariant }]}>
               <MaterialIcons name="info" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
@@ -170,43 +377,83 @@ export default function StudentProfileScreen() {
               </Text>
             </View>
 
-            {/* Table Mockup */}
+            {/* Total Due Summary */}
+            <View style={[styles.totalDueContainer, { backgroundColor: colors.errorContainer, borderColor: colors.error }]}>
+              <View>
+                <Text style={[styles.totalDueLabel, { color: colors.onErrorContainer }]}>TOTAL OUTSTANDING BALANCE</Text>
+                <Text style={[styles.totalDueValue, { color: colors.onErrorContainer }]}>
+                  ₹{fees.reduce((sum, f) => sum + (f.status !== 'waived' ? f.due_amount : 0), 0).toFixed(0)}
+                </Text>
+              </View>
+              <MaterialIcons name="account-balance" size={32} color={colors.onErrorContainer} opacity={0.3} />
+            </View>
+
+            {/* Table */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: '100%' }}>
               <View style={styles.table}>
                 <View style={[styles.tableHeader, { backgroundColor: colors.surface, borderBottomColor: colors.surfaceVariant }]}>
                   <Text style={[styles.th, { color: colors.outline, width: 100 }]}>MONTH</Text>
-                  <Text style={[styles.th, { color: colors.outline, width: 80 }]}>ATTEN. %</Text>
-                  <Text style={[styles.th, { color: colors.outline, width: 100 }]}>AMOUNT</Text>
-                  <Text style={[styles.th, { color: colors.outline, width: 180 }]}>STATUS</Text>
+                  <Text style={[styles.th, { color: colors.outline, width: 60 }]}>ATT %</Text>
+                  <Text style={[styles.th, { color: colors.outline, width: 100 }]}>STATUS</Text>
+                  <Text style={[styles.th, { color: colors.outline, width: 70 }]}>DUE</Text>
+                  <Text style={[styles.th, { color: colors.outline, width: 80 }]}>ACTION</Text>
                 </View>
 
-                {fees.map((fee) => (
-                  <View key={fee.id} style={[styles.tableRow, { borderBottomColor: colors.surfaceVariant }]}>
-                    <Text style={[styles.td, { color: colors.onSurface, width: 100 }]}>{fee.month.split(' ')[0]}</Text>
-                    <Text style={[styles.td, { color: fee.status === 'waived' ? colors.error : colors.onSurface, width: 80 }]}>
-                      {fee.status === 'waived' ? '15%' : '95%'}
-                    </Text>
-                    <Text style={[styles.td, { color: fee.status === 'waived' ? colors.outline : colors.onSurface, fontWeight: fee.status === 'waived' ? 'normal' : '500', textDecorationLine: fee.status === 'waived' ? 'line-through' : 'none', width: 100 }]}>
-                      ${fee.amount.toFixed(2)}
-                    </Text>
-                    <View style={[styles.tdActions, { width: 180 }]}>
-                      <View style={[styles.statusBadgeSmall, { backgroundColor: fee.status === 'paid' ? colors.secondaryContainer : fee.status === 'waived' ? colors.surfaceVariant : colors.errorContainer }]}>
-                        <MaterialIcons name={fee.status === 'paid' ? 'check-circle' : fee.status === 'waived' ? 'money-off' : 'schedule'} size={12} color={fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : colors.onErrorContainer} />
-                        <Text style={[styles.statusBadgeText, { color: fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : colors.onErrorContainer, textTransform: 'capitalize' }]}>
-                          {fee.status === 'due' ? `Due ${fee.due_date ? new Date(fee.due_date).getDate() : ''}` : fee.status}
-                        </Text>
+                {fees.length > 0 ? fees.map((fee) => {
+                  let displayMonth = fee.month.replace('Invalid Date ', '');
+                  try {
+                    if (displayMonth.includes('-')) {
+                      const [year, month] = displayMonth.split('-');
+                      const monthDate = new Date(parseInt(year), parseInt(month) - 1);
+                      if (!isNaN(monthDate.getTime())) {
+                        const monthName = monthDate.toLocaleString('default', { month: 'long' });
+                        displayMonth = `${monthName} ${year}`;
+                      }
+                    }
+                  } catch (e) {
+                    console.warn("Format error:", e);
+                  }
+
+                  return (
+                    <View key={fee.id} style={[styles.tableRow, { borderBottomColor: colors.surfaceVariant }]}>
+                      <Text style={[styles.td, { color: colors.onSurface, width: 100, fontSize: 13 }]}>{displayMonth}</Text>
+
+                      <Text style={[styles.td, { color: colors.onSurfaceVariant, width: 60, fontSize: 12 }]}>
+                        {Math.round((fee.attendance_rate || 0) * 100)}%
+                      </Text>
+
+                      {/* Status Column */}
+                      <View style={{ width: 100 }}>
+                        <View style={[styles.statusBadgeSmall, { alignSelf: 'flex-start', backgroundColor: fee.status === 'paid' ? colors.secondaryContainer : fee.status === 'waived' ? colors.surfaceVariant : fee.status === 'partial' ? colors.primaryContainer : colors.errorContainer }]}>
+                          <MaterialIcons name={fee.status === 'paid' ? 'check-circle' : fee.status === 'waived' ? 'money-off' : fee.status === 'partial' ? 'adjust' : 'schedule'} size={12} color={fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : fee.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer} />
+                          <Text style={[styles.statusBadgeText, { color: fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : fee.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer, textTransform: 'capitalize' }]}>
+                            {fee.status}
+                          </Text>
+                        </View>
                       </View>
-                      {fee.status === 'due' && (
-                        <TouchableOpacity 
-                          style={[styles.payButton, { backgroundColor: colors.primary }]}
-                          onPress={() => router.push({ pathname: '/student/update-fees', params: { id, name: studentName } })}
-                        >
-                          <Text style={[styles.payButtonText, { color: colors.onPrimary }]}>Pay</Text>
-                        </TouchableOpacity>
-                      )}
+
+                      <Text style={[styles.td, { color: fee.due_amount > 0 ? colors.error : colors.outline, width: 70, fontWeight: '700' }]}>
+                        ₹{fee.due_amount.toFixed(0)}
+                      </Text>
+
+                      {/* Action Column */}
+                      <View style={{ width: 80 }}>
+                        {(fee.status === 'due' || fee.status === 'partial') && (
+                          <TouchableOpacity
+                            style={[styles.payButton, { backgroundColor: colors.primary }]}
+                            onPress={() => handleOpenPayment(fee)}
+                          >
+                            <Text style={[styles.payButtonText, { color: colors.onPrimary }]}>Pay</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
+                  );
+                }) : (
+                  <View style={{ padding: 24 }}>
+                    <Text style={{ color: colors.onSurfaceVariant }}>No payment records found.</Text>
                   </View>
-                ))}
+                )}
 
               </View>
             </ScrollView>
@@ -214,61 +461,117 @@ export default function StudentProfileScreen() {
 
         </View>
 
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Payment Modal */}
+      <Modal
+        visible={isPaymentModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPaymentModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setPaymentModalVisible(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Make Payment</Text>
+              <TouchableOpacity onPress={() => setPaymentModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color={colors.outline} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedFee && (
+              <View style={styles.modalBody}>
+                <View style={styles.feeInfoRow}>
+                  <Text style={[styles.feeInfoLabel, { color: colors.onSurfaceVariant }]}>Month:</Text>
+                  <Text style={[styles.feeInfoValue, { color: colors.onSurface }]}>
+                    {(() => {
+                      try {
+                        if (selectedFee.month.includes('-')) {
+                          const [year, month] = selectedFee.month.split('-');
+                          return `${new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long' })} ${year}`;
+                        }
+                        return selectedFee.month;
+                      } catch (e) {
+                        return selectedFee.month;
+                      }
+                    })()}
+                  </Text>
+                </View>
+                <View style={styles.feeInfoRow}>
+                  <Text style={[styles.feeInfoLabel, { color: colors.onSurfaceVariant }]}>Remaining Due:</Text>
+                  <Text style={[styles.feeInfoValue, { color: colors.error, fontWeight: '700' }]}>₹{selectedFee.due_amount.toFixed(0)}</Text>
+                </View>
+
+                <View style={styles.amountInputWrapper}>
+                  <Text style={[styles.inputLabel, { color: colors.primary }]}>PAYMENT AMOUNT (₹)</Text>
+                  <TextInput
+                    style={[styles.paymentInput, { backgroundColor: colors.surfaceContainerLow, color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                    value={paymentAmount}
+                    onChangeText={setPaymentAmount}
+                    keyboardType="numeric"
+                    autoFocus
+                    placeholder="0.00"
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+                  onPress={handleMakePayment}
+                >
+                  <Text style={[styles.confirmButtonText, { color: colors.onPrimary }]}>Confirm Payment</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  topActions: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  headerBackButton: {
+    padding: 8,
+    marginLeft: -8,
   },
-  backText: {
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  editButton: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 4,
-    gap: 4,
   },
-  editButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  messageButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  messageButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  container: {
+  scrollContainer: {
     flex: 1,
   },
   contentContainer: {
@@ -287,8 +590,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   profileHeaderContent: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 24,
   },
   avatar: {
@@ -329,13 +632,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 16,
   },
-  detailItem: {
+  detailItemSimple: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  detailText: {
-    fontSize: 14,
+  smallIconBg: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailTextSimple: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.9,
   },
   bentoGrid: {
     gap: 24,
@@ -358,7 +670,7 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     borderTopWidth: 4,
-    padding: 0, 
+    padding: 0,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -427,6 +739,48 @@ const styles = StyleSheet.create({
   guardianValue: {
     fontSize: 16,
   },
+  monthNavigator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 8,
+    padding: 2,
+  },
+  navBtn: {
+    padding: 4,
+  },
+  monthLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  chartContainer: {
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 10,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    marginTop: 24,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   paymentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -434,9 +788,15 @@ const styles = StyleSheet.create({
     padding: 24,
     borderBottomWidth: 1,
   },
+  viewAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
   viewAllText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   infoBanner: {
     flexDirection: 'row',
@@ -445,6 +805,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     gap: 8,
+    marginBottom: 8, // Added space here
   },
   infoText: {
     fontSize: 14,
@@ -490,16 +851,105 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   payButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   payButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: 350,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalBody: {
+    gap: 16,
+  },
+  feeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  feeInfoLabel: {
+    fontSize: 14,
+  },
+  feeInfoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  amountInputWrapper: {
+    marginTop: 16,
+    gap: 8,
+  },
+  inputLabel: {
     fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  paymentInput: {
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  confirmButton: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  totalDueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    marginHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  totalDueLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  totalDueValue: {
+    fontSize: 32,
+    fontWeight: '800',
   },
 });

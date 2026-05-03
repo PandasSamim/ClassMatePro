@@ -1,77 +1,114 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo } from 'react';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { LineChart } from "react-native-gifted-charts";
 import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ClassSeries, ChartDataPoint } from '@/hooks/useDashboard';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-export function FeeCollectionChart() {
+export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSeries[], delay?: number }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  // Mock data for the bar chart
-  const data = [
-    { label: 'May', value: 30 },
-    { label: 'Jun', value: 45 },
-    { label: 'Jul', value: 80 },
-    { label: 'Aug', value: 65 },
-    { label: 'Sep', value: 85 },
-    { label: 'Oct', value: 100 },
-  ];
+  const maxValue = useMemo(() => {
+    if (!data || data.length === 0) return 1000;
+    let highest = 0;
+    data.forEach(series => {
+      series.data.forEach(point => {
+        if (point.value > highest) highest = point.value;
+      });
+    });
+    return Math.max(Math.ceil(highest * 1.2 / 100) * 100, 500);
+  }, [data]);
+
+  const VIBRANT_PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+
+  const chartLines = useMemo(() => {
+    return data.map((series, index) => ({
+      data: series.data.map(p => ({ value: p.value, label: p.label })),
+      color: VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
+      thickness: 3,
+    }));
+  }, [data]);
+
+  const legendItems = useMemo(() => {
+    return data.map((series, index) => ({
+      name: series.className,
+      color: VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
+    }));
+  }, [data]);
 
   return (
-    <Card style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>Fee Collection Trends</Text>
-        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'transparent' }]}>
-          <MaterialIcons name="more-vert" size={24} color={colors.onSurfaceVariant} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.chartContainer}>
-        {/* Y-Axis */}
-        <View style={styles.yAxis}>
-          <Text style={[styles.yAxisLabel, { color: colors.outline }]}>$50k</Text>
-          <Text style={[styles.yAxisLabel, { color: colors.outline }]}>$25k</Text>
-          <Text style={[styles.yAxisLabel, { color: colors.outline }]}>$0</Text>
-        </View>
-
-        {/* Graph Area */}
-        <View style={[styles.graphArea, { borderBottomColor: colors.outlineVariant }]}>
-          {/* Background Grid Lines */}
-          <View style={[styles.gridLine, { top: '0%', borderTopColor: colors.outlineVariant }]} />
-          <View style={[styles.gridLine, { top: '50%', borderTopColor: colors.outlineVariant }]} />
-
-          {/* Bars */}
-          <View style={styles.barsContainer}>
-            {data.map((item, index) => {
-              const isCurrent = index === data.length - 1;
-              return (
-                <View key={item.label} style={styles.barWrapper}>
-                  <View 
-                    style={[
-                      styles.bar, 
-                      { 
-                        height: `${item.value}%`, 
-                        backgroundColor: isCurrent ? colors.primary : colors.primaryContainer,
-                        opacity: isCurrent ? 1 : 0.6
-                      }
-                    ]} 
-                  />
-                  <Text style={[
-                    styles.xLabel, 
-                    { color: isCurrent ? colors.primary : colors.outline },
-                    isCurrent && { fontWeight: '700' }
-                  ]}>
-                    {item.label}
-                  </Text>
-                </View>
-              );
-            })}
+    <Animated.View entering={FadeInDown.delay(delay).duration(600).springify()}>
+      <Card style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.titleSection}>
+            <Text style={[styles.title, { color: colors.onSurface }]}>Fee Revenue Analysis</Text>
+            <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>Monthly collection by class</Text>
+          </View>
+          <View style={[styles.iconBadge, { backgroundColor: colors.primaryContainer }]}>
+            <MaterialIcons name="show-chart" size={20} color={colors.onPrimaryContainer} />
           </View>
         </View>
-      </View>
-    </Card>
+
+        {/* Legend */}
+        <View style={styles.legendContainer}>
+          {legendItems.map((item, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendText, { color: colors.onSurfaceVariant }]}>{item.name}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.chartWrapper}>
+          {chartLines.length > 0 ? (
+            <LineChart
+              data={chartLines[0].data}
+              data2={chartLines[1]?.data}
+              data3={chartLines[2]?.data}
+              data4={chartLines[3]?.data}
+              data5={chartLines[4]?.data}
+              color={chartLines[0].color}
+              color2={chartLines[1]?.color}
+              color3={chartLines[2]?.color}
+              color4={chartLines[3]?.color}
+              color5={chartLines[4]?.color}
+              dataPointsColor1={chartLines[0].color}
+              dataPointsColor2={chartLines[1]?.color}
+              dataPointsColor3={chartLines[2]?.color}
+              dataPointsColor4={chartLines[3]?.color}
+              dataPointsColor5={chartLines[4]?.color}
+              thickness={3}
+              noOfSections={4}
+              maxValue={maxValue}
+              height={180}
+              width={Dimensions.get('window').width - 100}
+              initialSpacing={20}
+              spacing={50}
+              yAxisThickness={0}
+              xAxisThickness={0}
+              rulesColor={colors.surfaceVariant}
+              rulesType="dashed"
+              yAxisTextStyle={{ color: colors.outline, fontSize: 10 }}
+              xAxisLabelTextStyle={{ color: colors.outline, fontSize: 10 }}
+              yAxisLabelPrefix="₹"
+              hideDataPoints={false}
+              dataPointsRadius={4}
+              showValuesAsDataPointsText={false}
+              animateOnDataChange
+              animationDuration={1000}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={{ color: colors.onSurfaceVariant }}>No collection data for this period</Text>
+            </View>
+          )}
+        </View>
+      </Card>
+    </Animated.View>
   );
 }
 
@@ -79,74 +116,59 @@ const styles = StyleSheet.create({
   container: {
     padding: 24,
     marginBottom: 24,
-    flexDirection: 'column',
+    borderRadius: 24,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  titleSection: {
+    flex: 1,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  iconButton: {
-    padding: 4,
-    borderRadius: 4,
-  },
-  chartContainer: {
-    height: 250,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  yAxis: {
-    height: '100%',
-    justifyContent: 'space-between',
-    paddingRight: 16,
-    paddingBottom: 24, // Space for x-axis labels
-  },
-  yAxisLabel: {
-    fontSize: 10,
+    fontSize: 18,
     fontWeight: '700',
   },
-  graphArea: {
-    flex: 1,
-    height: '100%',
-    borderBottomWidth: 1,
-    position: 'relative',
-    paddingBottom: 24, // Space for x-axis labels
+  subtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    opacity: 0.3,
-  },
-  barsContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: '100%',
-    paddingHorizontal: 8,
-  },
-  barWrapper: {
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
     alignItems: 'center',
-    height: '100%',
-    justifyContent: 'flex-end',
-    width: 32,
   },
-  bar: {
-    width: 24,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
+  legendContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
   },
-  xLabel: {
-    fontSize: 10,
-    marginTop: 8,
-    position: 'absolute',
-    bottom: -24,
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
+  legendDot: {
+    width: 8, height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  chartWrapper: {
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

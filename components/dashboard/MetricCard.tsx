@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface MetricCardProps {
   label: string;
@@ -15,16 +16,20 @@ interface MetricCardProps {
   trendText: string;
   trendColor: string;
   topBorderColor?: string;
+  delay?: number;
 }
 
 export function MetricCard({
-  label, value, iconName, iconBgColor, iconColor, trendIcon, trendText, trendColor, topBorderColor
+  label, value, iconName, iconBgColor, iconColor, trendIcon, trendText, trendColor, topBorderColor, delay = 0
 }: MetricCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <Card style={styles.card}>
+    <Animated.View 
+      entering={FadeInDown.delay(delay).duration(600).springify()}
+    >
+      <Card style={styles.card}>
       {topBorderColor && (
         <View style={[styles.topBar, { backgroundColor: topBorderColor }]} />
       )}
@@ -39,7 +44,8 @@ export function MetricCard({
         <MaterialIcons name={trendIcon} size={16} color={trendColor} />
         <Text style={[styles.trendText, { color: trendColor }]}>{trendText}</Text>
       </View>
-    </Card>
+      </Card>
+    </Animated.View>
   );
 }
 

@@ -1,0 +1,304 @@
+ClassMatePro - App Structure Analysis
+=====================================
+
+1. Overview
+This is an Expo + React Native + TypeScript mobile app using Expo Router for file-based navigation and expo-sqlite for offline local storage.
+
+Primary purpose:
+- Manage classes
+- Manage students
+- Track attendance
+- Calculate and collect fees
+- Store admin profile/settings
+
+
+2. Tech Stack
+- Framework: Expo 54 / React Native 0.81 / React 19
+- Language: TypeScript
+- Navigation: expo-router
+- Local database: expo-sqlite
+- UI icons: @expo/vector-icons / MaterialIcons
+- Media/files: expo-image-picker, expo-document-picker, expo-file-system, expo-sharing, expo-print
+
+
+3. High-Level Architecture
+
+App shell
+- `app/_layout.tsx`
+- Wraps the whole app in:
+  - `SQLiteProvider`
+  - Navigation `ThemeProvider`
+  - Root `Stack`
+
+Navigation model
+- Root stack handles top-level screens
+- Main app lives inside tab navigation under `app/(tabs)`
+- Feature detail screens are outside tabs
+
+Data model
+- All persistent data is stored in local SQLite tables
+- Business logic is mostly implemented inside custom hooks in `hooks/`
+- Screens call hooks
+- Hooks query/update the database
+- UI components in `components/` render data and interactions
+
+
+4. Routing Structure
+
+Root routes
+- `app/_layout.tsx`
+- `app/add-student.tsx`
+- `app/student/[id].tsx`
+- `app/student/update-fees.tsx`
+
+Tabbed routes
+- `app/(tabs)/_layout.tsx`
+- `app/(tabs)/index.tsx` -> Dashboard
+- `app/(tabs)/students.tsx` -> Student/class management
+- `app/(tabs)/attendance.tsx` -> Daily + monthly attendance
+- `app/(tabs)/settings.tsx` -> Admin profile + data management
+
+Other route files
+- `app/modal.tsx` exists but is not part of the main flow
+
+
+5. Database Layer
+
+Core file
+- `services/database.ts`
+
+Responsibilities
+- Defines DB name: `classmatepro.db`
+- Creates/migrates tables on app startup through `migrateDbIfNeeded`
+- Supports clearing/resetting data
+- Seeds sample data in some reset flows
+
+Tables created
+- `classes`
+- `students`
+- `attendance`
+- `fees`
+- `results`
+- `class_sessions`
+- `settings`
+
+Important relationships
+- `students.class_id -> classes.id`
+- `attendance.student_id -> students.id`
+- `fees.student_id -> students.id`
+- `results.student_id -> students.id`
+- `class_sessions.class_id -> classes.id`
+
+Notes
+- The DB file contains both schema creation and migration cleanup logic
+- Fee migration includes legacy month-format normalization
+- Attendance/session data drives fee calculation
+
+
+6. Business Logic Hooks
+
+`hooks/useStudents.ts`
+- Fetch classes
+- Fetch students
+- Fetch student by id
+- Add/update/delete student
+- Add/delete class
+- Maintains class/student lists for the UI
+
+`hooks/useAttendance.ts`
+- Fetch daily attendance by date and class
+- Mark one student attendance
+- Bulk mark attendance
+- Fetch monthly stats per student
+- Manage expected class sessions per month
+
+`hooks/useFees.ts`
+- Fetch fees by student
+- Calculate fees from attendance + class monthly fee
+- Process payment
+- Manual override fee totals
+- Includes deduplication and legacy-format cleanup
+
+Fee rule implemented
+- If monthly attendance is below 10%, fee can become waived
+- Otherwise fee is prorated from attendance participation
+
+`hooks/useDashboard.ts`
+- Computes top-level metrics:
+  - total fees collected
+  - total dues
+  - total students
+  - attendance percentage
+- Builds chart data for collections
+- Builds attendance breakdown by class
+
+`hooks/useSettings.ts`
+- Loads and updates admin profile/settings
+
+Other hooks
+- `hooks/use-color-scheme.ts`
+- `hooks/use-color-scheme.web.ts`
+- `hooks/use-theme-color.ts`
+
+
+7. Screen Responsibilities
+
+Dashboard
+- `app/(tabs)/index.tsx`
+- Shows summary metrics, fee chart, attendance overview
+- Supports month/year filtering
+- Generates PDF report and shares it
+
+Students
+- `app/(tabs)/students.tsx`
+- Shows classes list and student roster
+- Supports class filtering and search
+- Opens add-student form
+- Opens student profile
+- Deletes students/classes
+
+Add/Edit Student
+- `app/add-student.tsx`
+- Used for both create and edit flows
+- Captures name, class, fees, contact, guardian info, avatar, join date
+
+Student Profile
+- `app/student/[id].tsx`
+- Shows student profile
+- Shows monthly attendance stats
+- Triggers fee calculation
+- Displays payment history
+- Supports payment collection modal
+
+Attendance
+- `app/(tabs)/attendance.tsx`
+- Two modes:
+  - daily attendance marking
+  - monthly summary by class
+- Supports expected sessions per month
+- Supports bulk attendance actions
+
+Settings
+- `app/(tabs)/settings.tsx`
+- Admin profile edit
+- Avatar upload
+- Import/export SQLite database
+- Wipe local data
+
+
+8. Component Structure
+
+Feature components
+- `components/dashboard/*`
+  - metric cards
+  - chart
+  - attendance overview
+  - filter modal
+
+- `components/students/*`
+  - class item
+  - student row
+  - add class modal
+
+- `components/attendance/*`
+  - summary card
+  - attendance card
+
+Shared/base components
+- `components/ui/*`
+- `components/haptic-tab.tsx`
+- `components/themed-*`
+- `components/parallax-scroll-view.tsx`
+
+Observation
+- The app mainly uses custom feature components rather than a strict design-system structure.
+
+
+9. Styling / Theme Structure
+
+Theme file
+- `constants/theme.ts`
+
+Pattern
+- Central color token object: `Colors.light` and `Colors.dark`
+- Screens usually do:
+  - `const colorScheme = useColorScheme()`
+  - `const colors = Colors[colorScheme ?? 'light']`
+
+Notes
+- Light theme is more complete than dark theme
+- Some screens mix theme tokens with hardcoded values
+
+
+10. File/Folder Summary
+
+`app/`
+- Route screens and navigation layout
+
+`components/`
+- Reusable UI and feature-specific presentation components
+
+`hooks/`
+- Main business logic and database interaction layer
+
+`services/`
+- Database setup, migration, reset, seed
+
+`constants/`
+- Theme tokens
+
+`assets/`
+- App icons and images
+
+`scripts/`
+- Project reset helper
+
+
+11. Architectural Strengths
+- Clear separation between screens, hooks, and database setup
+- Offline-first design with SQLite
+- Expo Router structure is easy to follow
+- Feature hooks encapsulate most CRUD/business logic
+- Attendance and fee logic are linked in a coherent way
+
+
+12. Structural Gaps / Inconsistencies
+
+`app/student/update-fees.tsx`
+- Imports `addOrUpdateFee` from `useFees`
+- Current `useFees.ts` does not export `addOrUpdateFee`
+- This screen appears out of sync with the current fee hook implementation
+
+Unused or unclear files
+- Several `.html` files at repo root appear unrelated to the active Expo app:
+  - `dashboard.html`
+  - `Filter.html`
+  - `Student_add.html`
+  - `Student Profile.html`
+  - `update students.html`
+- They look like design/mockup artifacts rather than runtime app files
+
+State/data notes
+- Some screens refetch data in multiple places instead of having a shared state/store
+- `loading` exists in `useStudents` but is not actively used
+- Some UI placeholders still exist, for example:
+  - hardcoded teacher `"TBD"` when creating a class
+  - message button in student profile has no wired action
+
+
+13. Practical Architecture Summary
+
+In simple terms, the app structure is:
+
+UI screens
+-> call feature hooks
+-> hooks run SQLite queries and business rules
+-> shared components render the visual pieces
+-> Expo Router organizes navigation across tabs and detail screens
+
+This is a small-to-medium local-first app with a feature-based layout:
+- navigation in `app/`
+- logic in `hooks/`
+- persistence in `services/database.ts`
+- presentation in `components/`
+

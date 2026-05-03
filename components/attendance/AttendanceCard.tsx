@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export type AttendanceStatus = 'present' | 'absent' | 'dayOff' | null;
+import React from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AttendanceStatus } from '@/hooks/useAttendance';
+export { AttendanceStatus };
 
 interface AttendanceCardProps {
   name: string;
@@ -13,10 +13,11 @@ interface AttendanceCardProps {
   avatarInitials?: string;
   status: AttendanceStatus;
   onStatusChange?: (status: AttendanceStatus) => void;
+  backgroundColor?: string;
 }
 
-export function AttendanceCard({ 
-  name, id, avatarUrl, avatarInitials, status, onStatusChange 
+export function AttendanceCard({
+  name, id, avatarUrl, avatarInitials, status, onStatusChange, backgroundColor
 }: AttendanceCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -26,25 +27,25 @@ export function AttendanceCard({
   return (
     <View style={[
       styles.card,
-      { backgroundColor: colors.surface, borderColor: colors.outlineVariant },
+      { backgroundColor: backgroundColor || colors.surface, borderColor: colors.outlineVariant },
       isAbsent && { backgroundColor: 'rgba(255, 218, 214, 0.1)', borderColor: colors.errorContainer }
     ]}>
       <View style={styles.info}>
-        <Avatar 
-          initials={avatarInitials} 
-          imageUrl={avatarUrl} 
-          size={48} 
+        <Avatar
+          initials={avatarInitials}
+          imageUrl={avatarUrl}
+          size={48}
         />
         <View style={styles.textInfo}>
           <Text style={[styles.name, { color: colors.onSurface }]}>{name}</Text>
           <Text style={[styles.id, { color: colors.onSurfaceVariant }]}>{id}</Text>
         </View>
       </View>
-      
+
       <View style={styles.actions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.button, 
+            styles.button,
             status === 'present' ? [styles.buttonActive, { backgroundColor: colors.secondary, borderColor: colors.secondary }] : styles.buttonInactive
           ]}
           onPress={() => onStatusChange?.('present')}
@@ -54,9 +55,9 @@ export function AttendanceCard({
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.button, 
+            styles.button,
             status === 'absent' ? [styles.buttonActive, { backgroundColor: colors.error, borderColor: colors.error }] : styles.buttonInactive
           ]}
           onPress={() => onStatusChange?.('absent')}
@@ -66,9 +67,9 @@ export function AttendanceCard({
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.button, 
+            styles.button,
             status === 'dayOff' ? [styles.buttonActive, { backgroundColor: colors.primary, borderColor: colors.primary }] : styles.buttonInactive
           ]}
           onPress={() => onStatusChange?.('dayOff')}
@@ -110,14 +111,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    alignSelf: 'flex-start',
-    ...(Platform.OS === 'web' ? { alignSelf: 'auto' } : {}),
+    width: '100%',
+    ...(Platform.OS === 'web' ? { width: 'auto', alignSelf: 'auto' } : {}),
   },
   button: {
-    paddingHorizontal: 20,
+    flex: 1,
     paddingVertical: 8,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonInactive: {
     borderColor: '#c3c5d7',
@@ -127,7 +130,8 @@ const styles = StyleSheet.create({
     // colors set dynamically
   },
   buttonText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

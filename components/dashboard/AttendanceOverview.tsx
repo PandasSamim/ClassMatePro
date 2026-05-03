@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface ProgressBarProps {
   label: string;
@@ -28,23 +29,51 @@ function ProgressBar({ label, percentage, color }: ProgressBarProps) {
   );
 }
 
-export function AttendanceOverview() {
+export interface AttendanceBreakdown {
+  grade: string;
+  percentage: number;
+}
+
+interface AttendanceOverviewProps {
+  data: AttendanceBreakdown[];
+  delay?: number;
+}
+
+export function AttendanceOverview({ data, delay = 0 }: AttendanceOverviewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const getProgressColor = (percentage: number) => {
+    if (percentage >= 90) return colors.secondary;
+    if (percentage >= 80) return colors.primaryContainer;
+    return colors.error;
+  };
+
   return (
-    <Card style={styles.container}>
+    <Animated.View 
+      entering={FadeInDown.delay(delay).duration(600).springify()}
+    >
+      <Card style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>Attendance Overview</Text>
-        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'transparent' }]}>
-          <MaterialIcons name="more-vert" size={24} color={colors.onSurfaceVariant} />
-        </TouchableOpacity>
+        <View>
+          <Text style={[styles.title, { color: colors.onSurface }]}>Attendance Overview</Text>
+        </View>
+        <View style={[styles.iconBadge, { backgroundColor: '#10b981' }]}>
+          <MaterialIcons name="event-available" size={20} color="white" />
+        </View>
       </View>
 
       <View style={styles.content}>
-        <ProgressBar label="Grade 10" percentage={96} color={colors.secondary} />
-        <ProgressBar label="Grade 11" percentage={92} color={colors.primaryContainer} />
-        <ProgressBar label="Grade 12" percentage={88} color={colors.error} />
+        {data.length > 0 ? data.map((item, index) => (
+          <ProgressBar 
+            key={index}
+            label={item.grade} 
+            percentage={Math.round(item.percentage)} 
+            color={getProgressColor(item.percentage)} 
+          />
+        )) : (
+          <Text style={{ color: colors.onSurfaceVariant }}>No attendance data available.</Text>
+        )}
 
         <View style={[
           styles.infoBox, 
@@ -60,6 +89,7 @@ export function AttendanceOverview() {
         </View>
       </View>
     </Card>
+    </Animated.View>
   );
 }
 
@@ -79,9 +109,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-  iconButton: {
-    padding: 4,
-    borderRadius: 4,
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     gap: 24,

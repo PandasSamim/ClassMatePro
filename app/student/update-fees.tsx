@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, StatusBar, Image, TextInput, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Image, TextInput, KeyboardAvoidingView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useFees } from '@/hooks/useFees';
+import { useStudents } from '@/hooks/useStudents';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 export default function UpdateFeesScreen() {
   const colorScheme = useColorScheme();
@@ -12,47 +15,73 @@ export default function UpdateFeesScreen() {
   const router = useRouter();
   const { id, name } = useLocalSearchParams();
 
-  const studentName = name ? String(name) : 'Sarah Jenkins';
+  const studentName = name ? String(name) : 'Student';
   const [newAmount, setNewAmount] = useState('');
   const [applyWaiver, setApplyWaiver] = useState(false);
   const [notes, setNotes] = useState('');
   const { addOrUpdateFee } = useFees();
+  const { fetchStudentById } = useStudents();
+  const [student, setStudent] = useState<any>(null);
 
-  const currentFee = 450.00;
+  React.useEffect(() => {
+    if (id) {
+      fetchStudentById(Number(id)).then(setStudent);
+    }
+  }, [id]);
+
+  const currentFee = 450.00; // This could also be fetched from a settings table if needed
   
   let estimatedTotal = newAmount ? parseFloat(newAmount) : currentFee;
   if (applyWaiver && !isNaN(estimatedTotal)) {
     estimatedTotal = estimatedTotal * 0.9;
   }
 
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      
-      <View style={[styles.header, { backgroundColor: colors.surfaceContainerLowest, borderBottomColor: colors.surfaceVariant }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+
+      <Animated.View 
+        entering={FadeInUp.duration(600).springify()}
+        style={[styles.header, { 
+          backgroundColor: colors.surfaceContainerLowest, 
+          borderBottomColor: colors.surfaceVariant,
+          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 20 
+        }]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
           <MaterialIcons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Update Fees</Text>
-        <View style={{ width: 24 }} />
-      </View>
+        
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Update Fees</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.onSurfaceVariant }]}>{studentName}</Text>
+        </View>
+
+        <View style={{ width: 40 }} />
+      </Animated.View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           
           <View style={styles.studentContext}>
-            <Image 
-              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBD2C8l2AG9kBsFCyVhJXD4VfDRGxDPA35Y7EIf_UUoot7qU2Foc0R_e6OruKLipU-yQZLbA2aoibQRM6kvVfTlxaKiXE_xc2PBvm2RgR22ykNIbbPzzd_Zmd8E5eK-hwzlNg4qVtjdCCa3vy3U5LeGxGSH9IPmp3SNj5iASbR86d931G_SdvICRpoYgpkzcNOfg8Hj_tkrtPeS70EKf4Aak6RZ7WZjwAofyIqv7eiwnMcCxHks3QbPAqzJhCmd64wiBrfFNNdO-mY' }} 
-              style={[styles.avatar, { borderColor: colors.outlineVariant }]} 
-            />
+            {student?.avatar_url ? (
+              <Image 
+                source={{ uri: student.avatar_url }} 
+                style={[styles.avatar, { borderColor: colors.outlineVariant }]} 
+              />
+            ) : (
+              <View style={[styles.avatar, { borderColor: colors.outlineVariant, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceVariant }]}>
+                <MaterialIcons name="person" size={32} color={colors.outline} />
+              </View>
+            )}
             <View>
               <Text style={[styles.studentName, { color: colors.onSurface }]}>{studentName}</Text>
               <View style={styles.gradeRow}>
                 <MaterialIcons name="school" size={18} color={colors.onSurfaceVariant} />
-                <Text style={[styles.gradeText, { color: colors.onSurfaceVariant }]}>Grade 10 - Science Stream</Text>
+                <Text style={[styles.gradeText, { color: colors.onSurfaceVariant }]}>{student?.class_name || 'Loading...'}</Text>
               </View>
             </View>
           </View>
@@ -60,7 +89,7 @@ export default function UpdateFeesScreen() {
           <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
             <Text style={[styles.cardLabel, { color: colors.onSurfaceVariant }]}>CURRENT MONTHLY FEE</Text>
             <View style={styles.feeAmountRow}>
-              <Text style={[styles.feeAmount, { color: colors.primary }]}>$450.00</Text>
+              <Text style={[styles.feeAmount, { color: colors.primary }]}>₹{currentFee.toFixed(2)}</Text>
               <Text style={[styles.feeUnit, { color: colors.onSurfaceVariant }]}>/ month</Text>
             </View>
             <View style={[styles.activeBillingRow, { borderTopColor: colors.surfaceVariant }]}>
@@ -75,7 +104,7 @@ export default function UpdateFeesScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Enter New Amount</Text>
               <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceContainerLow, borderBottomColor: colors.outlineVariant }]}>
-                <Text style={[styles.currencySymbol, { color: colors.onSurfaceVariant }]}>$</Text>
+                <Text style={[styles.currencySymbol, { color: colors.onSurfaceVariant }]}>₹</Text>
                 <TextInput
                   style={[styles.textInput, { color: colors.onSurface }]}
                   placeholder="0.00"
@@ -123,12 +152,12 @@ export default function UpdateFeesScreen() {
           <View style={[styles.summaryCard, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
             <View style={styles.summaryItem}>
               <Text style={[styles.cardLabel, { color: colors.onSurfaceVariant }]}>EFFECTIVE FROM</Text>
-              <Text style={[styles.summaryValue, { color: colors.onSurface }]}>Next Billing Cycle (Oct 1, 2024)</Text>
+              <Text style={[styles.summaryValue, { color: colors.onSurface }]}>{currentMonth}</Text>
             </View>
             <View style={[styles.summaryItem, { alignItems: 'flex-end' }]}>
               <Text style={[styles.cardLabel, { color: colors.onSurfaceVariant }]}>ESTIMATED NEW TOTAL</Text>
               <Text style={[styles.summaryTotal, { color: colors.primary }]}>
-                {isNaN(estimatedTotal) ? 'Pending Input' : `$${estimatedTotal.toFixed(2)}`}
+                {isNaN(estimatedTotal) ? 'Pending Input' : `₹${estimatedTotal.toFixed(2)}`}
               </Text>
             </View>
           </View>
@@ -150,7 +179,7 @@ export default function UpdateFeesScreen() {
           style={[styles.bottomButtonPrimary, { backgroundColor: colors.primaryContainer }]}
           onPress={async () => {
             if (id) {
-              const success = await addOrUpdateFee(Number(id), estimatedTotal, 'November 2023'); // Using current month mock
+              const success = await addOrUpdateFee(Number(id), estimatedTotal, currentMonth);
               if (success) {
                 router.back();
               } else {
@@ -163,37 +192,35 @@ export default function UpdateFeesScreen() {
           <Text style={[styles.bottomButtonTextPrimary, { color: colors.onPrimaryContainer }]}>Confirm Adjustment</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 64,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
-  backButton: {
+  headerBackButton: {
     padding: 8,
+    marginLeft: -8,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: 8,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
-  container: {
-    flex: 1,
+  headerSubtitle: {
+    fontSize: 12,
   },
   contentContainer: {
     padding: 24,

@@ -18,11 +18,12 @@ interface StudentRowProps {
   statusOutlined?: boolean;
   onPress?: () => void;
   onMorePress?: () => void;
+  onDelete?: () => void;
 }
 
 export function StudentRow({ 
   name, avatarInitials, avatarUrl, avatarBg, avatarText, 
-  status, statusVariant, statusOutlined, onPress, onMorePress 
+  status, statusVariant, statusOutlined, onPress, onMorePress, onDelete 
 }: StudentRowProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -46,9 +47,15 @@ export function StudentRow({
       
       <View style={styles.right}>
         <Badge label={status} variant={statusVariant} outlined={statusOutlined} />
-        <TouchableOpacity style={styles.moreButton} onPress={onMorePress}>
-          <MaterialIcons name="more-vert" size={20} color={colors.outline} />
-        </TouchableOpacity>
+        {onDelete ? (
+          <TouchableOpacity style={styles.moreButton} onPress={onDelete}>
+            <MaterialIcons name="delete-outline" size={20} color={colors.error} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.moreButton} onPress={onMorePress}>
+            <MaterialIcons name="more-vert" size={20} color={colors.outline} />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );

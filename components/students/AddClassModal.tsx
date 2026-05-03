@@ -69,7 +69,7 @@ export function AddClassModal({ visible, onClose, onAdd }: AddClassModalProps) {
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Monthly Fees</Text>
               <View style={styles.inputWithPrefix}>
-                <Text style={[styles.prefix, { color: colors.onSurfaceVariant }]}>$</Text>
+                <Text style={[styles.prefix, { color: colors.onSurfaceVariant }]}>₹</Text>
                 <TextInput
                   style={[styles.input, styles.inputPrefixed, { backgroundColor: colors.surfaceContainerLow, color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
                   value={monthlyFees}

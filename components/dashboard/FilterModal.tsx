@@ -7,23 +7,39 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 interface FilterModalProps {
   visible: boolean;
   onClose: () => void;
+  onApply: (year: number | undefined, month: number | undefined) => void;
+  initialYear?: string;
+  initialMonth?: string;
 }
-
-export function FilterModal({ visible, onClose }: FilterModalProps) {
+ 
+export function FilterModal({ visible, onClose, onApply, initialYear, initialMonth }: FilterModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  const [selectedYear, setSelectedYear] = useState('2023');
-  const [selectedMonth, setSelectedMonth] = useState('8'); // Aug
-
-  const years = ['2022', '2023', '2024'];
+ 
+  const currentYear = new Date().getFullYear().toString();
+  const currentMonth = (new Date().getMonth() + 1).toString();
+ 
+  const [selectedYear, setSelectedYear] = useState(initialYear || currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || currentMonth);
+ 
+  const years = [(parseInt(currentYear) - 1).toString(), currentYear];
   const months = [
     { label: 'Jan', value: '1' }, { label: 'Feb', value: '2' }, { label: 'Mar', value: '3' },
     { label: 'Apr', value: '4' }, { label: 'May', value: '5' }, { label: 'Jun', value: '6' },
     { label: 'Jul', value: '7' }, { label: 'Aug', value: '8' }, { label: 'Sep', value: '9' },
     { label: 'Oct', value: '10' }, { label: 'Nov', value: '11' }, { label: 'Dec', value: '12' },
   ];
+ 
+  const handleApply = () => {
+    onApply(parseInt(selectedYear), parseInt(selectedMonth));
+    onClose();
+  };
 
+  const handleAllTime = () => {
+    (onApply as any)(undefined, undefined);
+    onClose();
+  };
+ 
   return (
     <Modal
       visible={visible}
@@ -38,12 +54,17 @@ export function FilterModal({ visible, onClose }: FilterModalProps) {
         <View style={[styles.bottomSheet, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.surfaceVariant }]}>
-            <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Select Month & Year</Text>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Filter Period</Text>
+              <TouchableOpacity onPress={handleAllTime} style={{ marginTop: 4 }}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>SHOW ALL TIME</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
-
+ 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Year Selection */}
             <View style={styles.section}>
@@ -51,15 +72,24 @@ export function FilterModal({ visible, onClose }: FilterModalProps) {
               <View style={styles.grid}>
                 {years.map(year => {
                   const isSelected = selectedYear === year;
+                  const isFuture = parseInt(year) > parseInt(currentYear);
                   return (
                     <TouchableOpacity
                       key={year}
+                      disabled={isFuture}
                       style={[
                         styles.gridItem,
                         { borderColor: colors.outlineVariant, backgroundColor: colors.surface },
-                        isSelected && { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer }
+                        isSelected && { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
+                        isFuture && { opacity: 0.3 }
                       ]}
-                      onPress={() => setSelectedYear(year)}
+                      onPress={() => {
+                        setSelectedYear(year);
+                        // If moving to current year and selected month is in future, reset to current month
+                        if (parseInt(year) === parseInt(currentYear) && parseInt(selectedMonth) > parseInt(currentMonth)) {
+                          setSelectedMonth(currentMonth);
+                        }
+                      }}
                     >
                       <Text style={[
                         styles.gridItemText,
@@ -73,20 +103,24 @@ export function FilterModal({ visible, onClose }: FilterModalProps) {
                 })}
               </View>
             </View>
-
+ 
             {/* Month Selection */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.onSurfaceVariant }]}>MONTH</Text>
               <View style={styles.grid}>
                 {months.map(month => {
                   const isSelected = selectedMonth === month.value;
+                  const isFuture = parseInt(selectedYear) === parseInt(currentYear) && parseInt(month.value) > parseInt(currentMonth);
+                  
                   return (
                     <TouchableOpacity
                       key={month.value}
+                      disabled={isFuture}
                       style={[
                         styles.gridItem,
                         { borderColor: colors.outlineVariant, backgroundColor: colors.surface },
-                        isSelected && { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer }
+                        isSelected && { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
+                        isFuture && { opacity: 0.3 }
                       ]}
                       onPress={() => setSelectedMonth(month.value)}
                     >
@@ -104,7 +138,7 @@ export function FilterModal({ visible, onClose }: FilterModalProps) {
             </View>
             <View style={{height: 20}} />
           </ScrollView>
-
+ 
           {/* Footer Actions */}
           <View style={[styles.footer, { borderTopColor: colors.surfaceVariant, backgroundColor: colors.surface }]}>
             <SafeAreaView style={styles.footerSafeArea}>
@@ -116,7 +150,7 @@ export function FilterModal({ visible, onClose }: FilterModalProps) {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.footerButton, styles.applyButton, { backgroundColor: colors.primary }]} 
-                onPress={onClose}
+                onPress={handleApply}
               >
                 <Text style={[styles.buttonText, { color: colors.onPrimary }]}>APPLY FILTERS</Text>
               </TouchableOpacity>
