@@ -107,6 +107,8 @@ export const Colors = {
   },
 };
 
+export type ThemeColors = typeof Colors.light;
+
 export const Fonts = Platform.select({
   ios: {
     sans: 'system-ui',

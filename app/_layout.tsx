@@ -28,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="add-student" />
             <Stack.Screen name="student/[id]" />
+            <Stack.Screen name="student/payment-history" />
             <Stack.Screen name="student/update-fees" />
           </Stack>
           <StatusBar style="dark" backgroundColor="#f8f9fa" />

@@ -162,7 +162,7 @@ export default function StudentsScreen() {
       </View>
 
       {/* Student List Section Header */}
-      <View style={[styles.sectionContainer, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, marginBottom: 0, borderBottomWidth: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
+      <View style={[styles.rosterCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
         <View style={styles.rosterHeader}>
           <View>
             <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Student Roster</Text>
@@ -202,7 +202,7 @@ export default function StudentsScreen() {
           const zebraColor = isOdd ? brandTint : colors.surfaceContainerLowest;
 
           return (
-            <View style={{ backgroundColor: zebraColor, paddingHorizontal: 16, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.outlineVariant }}>
+            <View style={{ backgroundColor: zebraColor, paddingHorizontal: 12, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.outlineVariant }}>
               <StudentRow 
                 name={`${s.first_name} ${s.last_name}`}
                 avatarInitials={`${s.first_name[0]}${s.last_name[0]}`}
@@ -210,7 +210,7 @@ export default function StudentsScreen() {
                 avatarBg={colors.primaryContainer}
                 avatarText={colors.onPrimaryContainer}
                 status={s.status}
-                statusVariant={s.status.toLowerCase() === 'absent' ? 'error' : 'success'}
+                statusVariant={s.status.toLowerCase() === 'absent' ? 'error' : s.status.toLowerCase() === 'enrolled' ? 'neutral' : 'success'}
                 statusOutlined={s.status.toLowerCase() === 'absent'}
                 onPress={() => router.push({ 
                   pathname: '/student/[id]', 
@@ -243,7 +243,7 @@ export default function StudentsScreen() {
               <ActivityIndicator color={colors.primary} />
             </View>
           ) : students.length > 0 ? (
-             <View style={{ height: 20, backgroundColor: colors.surfaceContainerLowest, borderBottomWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.outlineVariant, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 40 }} />
+             <View style={{ height: 20, backgroundColor: colors.surfaceContainerLowest, borderBottomWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.outlineVariant, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 40, marginTop: -1 }} />
           ) : null
         }
         onEndReached={handleLoadMore}
@@ -331,6 +331,17 @@ const styles = StyleSheet.create({
     elevation: 2,
     overflow: 'hidden',
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  rosterCard: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    marginTop: 8,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -344,10 +355,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
   iconButton: {
     padding: 4,
   },
@@ -359,8 +366,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 8,
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: 12,
+    marginBottom: 16,
     paddingHorizontal: 12,
   },
   searchIcon: {

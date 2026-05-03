@@ -52,13 +52,19 @@ export function Badge({ label, variant = 'neutral', style, outlined }: BadgeProp
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    minWidth: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   text: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
 });

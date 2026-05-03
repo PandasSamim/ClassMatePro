@@ -391,6 +391,7 @@ export const useFees = () => {
 
   return {
     fees,
+    loading,
     fetchFeesByStudent,
     fetchAllFeesByStudent,
     processPayment,

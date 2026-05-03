@@ -34,7 +34,7 @@ export function StudentRow({
       style={[styles.container, { borderBottomColor: colors.surfaceVariant }]}
       onPress={onPress || (() => router.push({ pathname: '/student/[id]', params: { id: name.replace(/\s+/g, '-').toLowerCase(), name } }))}
     >
-      <View style={styles.info}>
+      <View style={styles.avatarColumn}>
         <Avatar 
           initials={avatarInitials} 
           imageUrl={avatarUrl} 
@@ -42,11 +42,17 @@ export function StudentRow({
           backgroundColor={avatarBg}
           textColor={avatarText}
         />
-        <Text style={[styles.name, { color: colors.onSurface }]}>{name}</Text>
+      </View>
+
+      <View style={styles.nameColumn}>
+        <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>{name}</Text>
       </View>
       
-      <View style={styles.right}>
+      <View style={styles.statusColumn}>
         <Badge label={status} variant={statusVariant} outlined={statusOutlined} />
+      </View>
+      
+      <View style={styles.actionColumn}>
         {onDelete ? (
           <TouchableOpacity style={styles.moreButton} onPress={onDelete}>
             <MaterialIcons name="delete-outline" size={20} color={colors.error} />
@@ -64,28 +70,36 @@ export function StudentRow({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 0,
     borderBottomWidth: 1,
   },
-  info: {
-    flexDirection: 'row',
+  avatarColumn: {
+    width: 44,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nameColumn: {
+    flex: 1,
+    paddingLeft: 4,
   },
   name: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 12,
+    fontWeight: '600',
   },
-  right: {
-    flexDirection: 'row',
+  statusColumn: {
+    width: 90,
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
+  },
+  actionColumn: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingRight: 8,
   },
   moreButton: {
-    padding: 4,
-    marginLeft: 12,
+    padding: 8,
   },
 });
