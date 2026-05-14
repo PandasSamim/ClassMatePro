@@ -397,87 +397,66 @@ function DashboardScreen() {
         </View>
 
         <View style={styles.cardsContainer}>
-          {loadingMetrics ? (
-            <View style={{ padding: 40, width: '100%' }}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : (
-            <>
-              <View style={styles.metricWrapper}>
-                <MetricCard 
-                  label="COLLECTED"
-                  value={`₹${metrics.totalFeesCollected.toLocaleString()}`}
-                  iconName="account-balance-wallet"
-                  iconBgColor={colors.primaryFixed}
-                  iconColor={colors.onPrimaryFixed}
-                  trendIcon="trending-up"
-                  trendText="Total"
-                  trendColor={colors.secondary}
-                />
-              </View>
+          <View style={styles.metricWrapper}>
+            <MetricCard 
+              label="COLLECTED"
+              value={`₹${metrics.totalFeesCollected.toLocaleString()}`}
+              iconName="account-balance-wallet"
+              iconBgColor={colors.primaryFixed}
+              iconColor={colors.onPrimaryFixed}
+              trendIcon="trending-up"
+              trendText="Total"
+              trendColor={colors.secondary}
+            />
+          </View>
 
-              <View style={styles.metricWrapper}>
-                <MetricCard 
-                  label="DUES"
-                  value={`₹${metrics.totalDues.toLocaleString()}`}
-                  iconName="warning"
-                  iconBgColor={colors.errorContainer}
-                  iconColor={colors.onErrorContainer}
-                  trendIcon="warning"
-                  trendText={`${metrics.totalDues > 0 ? 'Pending' : 'No dues'}`}
-                  trendColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-                  topBorderColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-                />
-              </View>
+          <View style={styles.metricWrapper}>
+            <MetricCard 
+              label="DUES"
+              value={`₹${metrics.totalDues.toLocaleString()}`}
+              iconName="warning"
+              iconBgColor={colors.errorContainer}
+              iconColor={colors.onErrorContainer}
+              trendIcon="warning"
+              trendText={`${metrics.totalDues > 0 ? 'Pending' : 'No dues'}`}
+              trendColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
+              topBorderColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
+            />
+          </View>
 
-              <View style={styles.metricWrapper}>
-                <MetricCard 
-                  label="STUDENTS"
-                  value={metrics.totalStudents.toString()}
-                  iconName="groups"
-                  iconBgColor={colors.tertiaryContainer}
-                  iconColor={colors.onTertiaryContainer}
-                  trendIcon="sync"
-                  trendText="Total"
-                  trendColor={colors.secondary}
-                />
-              </View>
+          <View style={styles.metricWrapper}>
+            <MetricCard 
+              label="STUDENTS"
+              value={metrics.totalStudents.toString()}
+              iconName="groups"
+              iconBgColor={colors.tertiaryContainer}
+              iconColor={colors.onTertiaryContainer}
+              trendIcon="sync"
+              trendText="Total"
+              trendColor={colors.secondary}
+            />
+          </View>
 
-              <View style={styles.metricWrapper}>
-                <MetricCard 
-                  label="ATTENDANCE"
-                  value={`${metrics.attendancePercentage.toFixed(1)}%`}
-                  iconName="check-circle"
-                  iconBgColor={colors.secondaryContainer}
-                  iconColor={colors.onSecondaryContainer}
-                  trendIcon="info"
-                  trendText="Current"
-                  trendColor={colors.outline}
-                  topBorderColor={colors.secondary}
-                />
-              </View>
-            </>
-          )}
+          <View style={styles.metricWrapper}>
+            <MetricCard 
+              label="ATTENDANCE"
+              value={`${metrics.attendancePercentage.toFixed(1)}%`}
+              iconName="check-circle"
+              iconBgColor={colors.secondaryContainer}
+              iconColor={colors.onSecondaryContainer}
+              trendIcon="info"
+              trendText="Current"
+              trendColor={colors.outline}
+              topBorderColor={colors.secondary}
+            />
+          </View>
         </View>
 
-        {loadingCharts ? (
-          <View style={{ padding: 40, height: 200, justifyContent: 'center' }}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : (
-          <FeeCollectionChart 
-            data={chartData} 
-            delay={700}
-          />
-        )}
+        <FeeCollectionChart 
+          data={chartData} 
+        />
 
-        {loadingAttendance ? (
-          <View style={{ padding: 40, height: 150, justifyContent: 'center' }}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : (
-          <AttendanceOverview data={attendanceBreakdown} delay={800} />
-        )}
+        <AttendanceOverview data={attendanceBreakdown} />
         
         <View style={{height: 40}} />
       </ScrollView>
