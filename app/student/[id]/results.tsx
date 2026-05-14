@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useResults, StudentResult } from '@/hooks/useResults';
+import { useResults, StudentResult, GradingRule } from '@/hooks/useResults';
 import { Card } from '@/components/ui/Card';
 import Animated, { FadeInDown, FadeInUp, Layout, SlideInRight } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -55,10 +55,12 @@ export default function StudentResultsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { results, fetchResultsByStudent, addResult, bulkAddResults } = useResults();
+  const { results, gradingRules, fetchResultsByStudent, fetchGradingRules, updateGradingRules, bulkAddResults } = useResults();
 
   const [selectedTerm, setSelectedTerm] = useState<string>('All');
   const [isAddModalVisible, setAddModalVisible] = useState(false);
+  const [isSettingsVisible, setSettingsVisible] = useState(false);
+  
   const [form, setForm] = useState({
     term: 'First Unit',
     totalMarks: '100',
@@ -66,13 +68,16 @@ export default function StudentResultsScreen() {
     subjects: [{ subject: '', marks: '' }]
   });
 
+  const [tempRules, setTempRules] = useState<Omit<GradingRule, 'id'>[]>([]);
+
   const unitOptions = ['First Unit', 'Second Unit', 'Final Result'];
 
   useEffect(() => {
     if (id) {
       fetchResultsByStudent(Number(id));
+      fetchGradingRules();
     }
-  }, [id, fetchResultsByStudent]);
+  }, [id, fetchResultsByStudent, fetchGradingRules]);
 
   const handleSubjectCountChange = (countStr: string) => {
     const count = parseInt(countStr) || 0;
@@ -97,6 +102,13 @@ export default function StudentResultsScreen() {
       newSubjects[index] = { ...newSubjects[index], [field]: value };
       return { ...prev, subjects: newSubjects };
     });
+  };
+
+  const calculateGrade = (percentage: number) => {
+    if (!gradingRules || gradingRules.length === 0) return 'F';
+    const sortedRules = [...gradingRules].sort((a, b) => b.min_percentage - a.min_percentage);
+    const rule = sortedRules.find(r => percentage >= r.min_percentage);
+    return rule ? rule.grade_symbol : (sortedRules[sortedRules.length - 1]?.grade_symbol || 'F');
   };
 
   const handleAddResult = async () => {
@@ -139,22 +151,50 @@ export default function StudentResultsScreen() {
     const obtained = filteredResults.reduce((sum, r) => sum + r.marks, 0);
     const total = filteredResults.reduce((sum, r) => sum + r.total_marks, 0);
     const percentage = (obtained / total) * 100;
-    
-    let grade = 'F';
-    if (percentage >= 90) grade = 'A+';
-    else if (percentage >= 80) grade = 'A';
-    else if (percentage >= 70) grade = 'B';
-    else if (percentage >= 60) grade = 'C';
-    else if (percentage >= 50) grade = 'D';
-
+    const grade = calculateGrade(percentage);
     return { total, obtained, percentage, grade };
-  }, [filteredResults]);
+  }, [filteredResults, gradingRules]);
 
   const getGradeColor = (percentage: number) => {
     if (percentage >= 80) return colors.secondary;
     if (percentage >= 60) return colors.primary;
     if (percentage >= 40) return colors.tertiary;
     return colors.error;
+  };
+
+  const openSettings = () => {
+    setTempRules(gradingRules.map(({ min_percentage, grade_symbol }) => ({ min_percentage, grade_symbol })));
+    setSettingsVisible(true);
+  };
+
+  const handleUpdateRules = async () => {
+    const success = await updateGradingRules(tempRules);
+    if (success) {
+      setSettingsVisible(false);
+      Alert.alert('Success', 'Grading rules updated');
+    } else {
+      Alert.alert('Error', 'Failed to update rules');
+    }
+  };
+
+  const addRuleRow = () => {
+    setTempRules(prev => [...prev, { min_percentage: 0, grade_symbol: '' }]);
+  };
+
+  const removeRuleRow = (index: number) => {
+    setTempRules(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateRuleValue = (index: number, field: 'min_percentage' | 'grade_symbol', value: string) => {
+    setTempRules(prev => {
+      const next = [...prev];
+      if (field === 'min_percentage') {
+        next[index] = { ...next[index], min_percentage: parseInt(value) || 0 };
+      } else {
+        next[index] = { ...next[index], grade_symbol: value };
+      }
+      return next;
+    });
   };
 
   return (
@@ -178,6 +218,13 @@ export default function StudentResultsScreen() {
           <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Performance</Text>
           <Text style={[styles.headerSubtitle, { color: colors.onSurfaceVariant }]} numberOfLines={1}>{name}</Text>
         </View>
+
+        <TouchableOpacity 
+          onPress={openSettings}
+          style={[styles.iconBtnHeader, { backgroundColor: colors.surfaceContainerLow, marginRight: 10 }]}
+        >
+          <Ionicons name="settings-outline" size={22} color={colors.onSurface} />
+        </TouchableOpacity>
         
         <TouchableOpacity 
           onPress={() => setAddModalVisible(true)}
@@ -268,6 +315,7 @@ export default function StudentResultsScreen() {
           filteredResults.map((result, idx) => {
             const perc = (result.marks / result.total_marks) * 100;
             const statusColor = getGradeColor(perc);
+            const grade = calculateGrade(perc);
             
             return (
               <Animated.View 
@@ -282,7 +330,12 @@ export default function StudentResultsScreen() {
                     </View>
                     <View style={styles.subjectInfo}>
                       <Text style={[styles.subjectName, { color: colors.onSurface }]}>{result.subject}</Text>
-                      <Text style={[styles.termTag, { color: colors.onSurfaceVariant }]}>{result.term}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={[styles.termTag, { color: colors.onSurfaceVariant }]}>{result.term}</Text>
+                        <View style={[styles.miniGrade, { backgroundColor: statusColor }]}>
+                           <Text style={styles.miniGradeText}>{grade}</Text>
+                        </View>
+                      </View>
                     </View>
                     <View style={styles.marksContainer}>
                       <Text style={[styles.marksValue, { color: colors.onSurface }]}>{result.marks}</Text>
@@ -337,6 +390,73 @@ export default function StudentResultsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Settings Modal (Grading Rules) */}
+      <Modal
+        visible={isSettingsVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, height: '70%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeaderInner}>
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Grading Rules</Text>
+              <TouchableOpacity onPress={() => setSettingsVisible(false)}>
+                <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.formLabel, { color: colors.outline, marginBottom: 15 }]}>DEFINE PERCENTAGE THRESHOLDS & SYMBOLS</Text>
+              
+              {tempRules.map((rule, idx) => (
+                <View key={idx} style={styles.ruleRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.miniLabel, { color: colors.outline }]}>MIN %</Text>
+                    <TextInput
+                      style={[styles.ruleInput, { backgroundColor: colors.surfaceContainerLow, color: colors.onSurface }]}
+                      value={rule.min_percentage.toString()}
+                      keyboardType="numeric"
+                      onChangeText={(val) => updateRuleValue(idx, 'min_percentage', val)}
+                    />
+                  </View>
+                  <View style={{ width: 15 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.miniLabel, { color: colors.outline }]}>SYMBOL</Text>
+                    <TextInput
+                      style={[styles.ruleInput, { backgroundColor: colors.surfaceContainerLow, color: colors.onSurface }]}
+                      value={rule.grade_symbol}
+                      placeholder="e.g. A+"
+                      onChangeText={(val) => updateRuleValue(idx, 'grade_symbol', val)}
+                    />
+                  </View>
+                  <TouchableOpacity onPress={() => removeRuleRow(idx)} style={styles.removeRuleBtn}>
+                    <MaterialIcons name="remove-circle-outline" size={22} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <TouchableOpacity 
+                style={[styles.addRuleRowBtn, { borderColor: colors.outlineVariant }]} 
+                onPress={addRuleRow}
+              >
+                <MaterialIcons name="add" size={18} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 5 }}>Add Rule</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                onPress={handleUpdateRules}
+              >
+                <Text style={[styles.submitButtonText, { color: colors.onPrimary }]}>Save Grading System</Text>
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modern Add Result Modal */}
       <Modal
@@ -497,6 +617,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginTop: -2,
   },
+  iconBtnHeader: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addButton: {
     width: 44,
     height: 44,
@@ -655,6 +782,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.6,
     marginTop: 2,
+  },
+  miniGrade: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 5,
+  },
+  miniGradeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
   },
   marksContainer: {
     flexDirection: 'row',
@@ -825,5 +963,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  ruleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 15,
+  },
+  miniLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 5,
+  },
+  ruleInput: {
+    height: 45,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removeRuleBtn: {
+    padding: 10,
+  },
+  addRuleRowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    marginTop: 10,
   },
 });

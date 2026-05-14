@@ -75,6 +75,7 @@ export async function migrateDbIfNeeded(db: SQLite.SQLiteDatabase) {
       FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
     )`);
     await db.runAsync("CREATE TABLE IF NOT EXISTS results (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, subject TEXT NOT NULL, marks INTEGER NOT NULL, total_marks INTEGER DEFAULT 100, term TEXT NOT NULL, date TEXT NOT NULL, FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE)");
+    await db.runAsync("CREATE TABLE IF NOT EXISTS grading_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, min_percentage INTEGER NOT NULL, grade_symbol TEXT NOT NULL)");
     await db.runAsync("CREATE TABLE IF NOT EXISTS class_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, class_id INTEGER NOT NULL, month TEXT NOT NULL, total_expected INTEGER DEFAULT 0, UNIQUE(class_id, month), FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE)");
     await db.runAsync("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_name TEXT NOT NULL, admin_email TEXT, admin_avatar TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
 
@@ -261,6 +262,14 @@ async function seedDatabase(db: SQLite.SQLiteDatabase, force: boolean = false) {
     // 4. Add some results
     await db.runAsync("INSERT INTO results (student_id, subject, marks, total_marks, term, date) VALUES (1, 'Mathematics', 95, 100, 'First Term', ?)", [today.toISOString().split('T')[0]]);
     await db.runAsync("INSERT INTO results (student_id, subject, marks, total_marks, term, date) VALUES (1, 'Physics', 88, 100, 'First Term', ?)", [today.toISOString().split('T')[0]]);
+
+    // Default Grading Rules
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (90, 'A+')");
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (80, 'A')");
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (70, 'B')");
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (60, 'C')");
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (50, 'D')");
+    await db.runAsync("INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (0, 'F')");
 
     console.log('Seeding complete!');
   } catch (error) {

@@ -11,9 +11,16 @@ export interface StudentResult {
   date: string;
 }
 
+export interface GradingRule {
+  id: number;
+  min_percentage: number;
+  grade_symbol: string;
+}
+
 export function useResults() {
   const db = useSQLiteContext();
   const [results, setResults] = useState<StudentResult[]>([]);
+  const [gradingRules, setGradingRules] = useState<GradingRule[]>([]);
 
   const fetchResultsByStudent = useCallback(async (studentId: number) => {
     try {
@@ -28,6 +35,53 @@ export function useResults() {
       return [];
     }
   }, [db]);
+
+  const fetchGradingRules = useCallback(async () => {
+    try {
+      const data = await db.getAllAsync<GradingRule>(
+        'SELECT * FROM grading_rules ORDER BY min_percentage DESC'
+      );
+      
+      // If no rules exist, return defaults and optionally seed them
+      if (data.length === 0) {
+        const defaults = [
+          { id: 1, min_percentage: 90, grade_symbol: 'A+' },
+          { id: 2, min_percentage: 80, grade_symbol: 'A' },
+          { id: 3, min_percentage: 70, grade_symbol: 'B' },
+          { id: 4, min_percentage: 60, grade_symbol: 'C' },
+          { id: 5, min_percentage: 50, grade_symbol: 'D' },
+          { id: 6, min_percentage: 0, grade_symbol: 'F' },
+        ];
+        setGradingRules(defaults);
+        return defaults;
+      }
+
+      setGradingRules(data);
+      return data;
+    } catch (error) {
+      console.error('Fetch grading rules failed:', error);
+      return [];
+    }
+  }, [db]);
+
+  const updateGradingRules = useCallback(async (rules: Omit<GradingRule, 'id'>[]) => {
+    try {
+      await db.withTransactionAsync(async () => {
+        await db.runAsync('DELETE FROM grading_rules');
+        for (const rule of rules) {
+          await db.runAsync(
+            'INSERT INTO grading_rules (min_percentage, grade_symbol) VALUES (?, ?)',
+            [rule.min_percentage, rule.grade_symbol]
+          );
+        }
+      });
+      await fetchGradingRules();
+      return true;
+    } catch (error) {
+      console.error('Update grading rules failed:', error);
+      return false;
+    }
+  }, [db, fetchGradingRules]);
 
   const addResult = useCallback(async (studentId: number, subject: string, marks: number, totalMarks: number, term: string) => {
     try {
@@ -63,7 +117,10 @@ export function useResults() {
 
   return {
     results,
+    gradingRules,
     fetchResultsByStudent,
+    fetchGradingRules,
+    updateGradingRules,
     addResult,
     bulkAddResults
   };
