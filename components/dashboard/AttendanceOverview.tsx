@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+
 
 interface ProgressBarProps {
   label: string;
@@ -50,9 +50,7 @@ export function AttendanceOverview({ data, delay = 0 }: AttendanceOverviewProps)
   };
 
   return (
-    <Animated.View 
-      entering={FadeInDown.delay(delay).duration(600).springify()}
-    >
+    <View>
       <Card style={styles.container}>
       <View style={styles.header}>
         <View>
@@ -89,7 +87,7 @@ export function AttendanceOverview({ data, delay = 0 }: AttendanceOverviewProps)
         </View>
       </View>
     </Card>
-    </Animated.View>
+    </View>
   );
 }
 

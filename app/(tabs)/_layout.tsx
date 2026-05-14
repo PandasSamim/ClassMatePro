@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   withSpring, 
@@ -9,6 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { HapticTab } from '@/components/haptic-tab';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
   const scale = useSharedValue(1);
@@ -32,20 +34,28 @@ function TabIcon({ name, color, focused }: { name: any; color: string; focused: 
 }
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#1a56db',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.outline,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.surfaceContainerLowest,
           borderTopWidth: 1,
-          borderTopColor: '#f1f5f9',
-          height: 65,
-          paddingBottom: 10,
+          borderTopColor: colors.surfaceVariant,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 10,
           paddingTop: 5,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
         }
       }}>
       <Tabs.Screen

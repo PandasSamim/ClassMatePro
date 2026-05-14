@@ -5,11 +5,13 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useGlobalSettings } from '@/context/SettingsContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function TopNavbar() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { settings } = useGlobalSettings();
+  const insets = useSafeAreaInsets();
 
   return (
     <Animated.View 
@@ -17,8 +19,13 @@ export function TopNavbar() {
       style={[styles.header, { 
         backgroundColor: colors.surfaceContainerLowest, 
         borderBottomColor: colors.surfaceVariant,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-        height: (Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 64 : 64),
+        paddingTop: insets.top,
+        height: insets.top + 64,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
       }]}
     >
       <View style={styles.headerLeft}>
@@ -47,7 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     zIndex: 100,
   },

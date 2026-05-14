@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ClassSeries } from '@/hooks/useDashboard';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+
 
 export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSeries[], delay?: number }) {
   const colorScheme = useColorScheme();
@@ -59,7 +59,7 @@ export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSerie
   };
 
   return (
-    <Animated.View entering={FadeInDown.delay(delay).duration(600).springify()}>
+    <View>
       <Card style={styles.container}>
         <View style={styles.header}>
           <View style={styles.titleSection}>
@@ -104,7 +104,7 @@ export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSerie
           )}
         </View>
       </Card>
-    </Animated.View>
+    </View>
   );
 }
 

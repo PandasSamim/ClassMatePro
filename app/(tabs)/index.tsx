@@ -14,7 +14,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { useGlobalSettings } from '@/context/SettingsContext';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
 
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
 
@@ -356,16 +356,14 @@ function DashboardScreen() {
 
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         
-        <Animated.View 
-          entering={FadeInDown.delay(100).duration(600).springify()}
+        <View 
           style={styles.pageHeader}
         >
           <Text style={[styles.pageTitle, { color: colors.onSurface }]}>Dashboard Overview</Text>
           <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Monitor key academic and financial metrics.</Text>
-        </Animated.View>
+        </View>
 
-        <Animated.View 
-          entering={FadeInDown.delay(200).duration(600).springify()}
+        <View 
           style={styles.filtersRow}
         >
           <TouchableOpacity 
@@ -393,7 +391,7 @@ function DashboardScreen() {
               </>
             )}
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
         <View style={styles.cardsContainer}>
           {loadingMetrics ? (

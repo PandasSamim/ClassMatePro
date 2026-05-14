@@ -24,7 +24,12 @@ export default function RootLayout() {
     >
       <SettingsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ 
+            headerShown: false,
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true
+          }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="add-student" />
             <Stack.Screen name="student/[id]" />
