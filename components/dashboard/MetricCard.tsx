@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import Animated, { useAnimatedProps, useSharedValue, withSpring, useDerivedValue } from 'react-native-reanimated';
 
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface MetricCardProps {
   label: string;
@@ -16,32 +18,61 @@ interface MetricCardProps {
   trendText: string;
   trendColor: string;
   topBorderColor?: string;
-  delay?: number;
 }
 
 export function MetricCard({
-  label, value, iconName, iconBgColor, iconColor, trendIcon, trendText, trendColor, topBorderColor, delay = 0
+  label, value, iconName, iconBgColor, iconColor, trendIcon, trendText, trendColor, topBorderColor
 }: MetricCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const numericValue = parseFloat(value.replace(/[^0-9.]/g, '')) || 0;
+  const prefix = value.startsWith('₹') ? '₹' : '';
+  const suffix = value.endsWith('%') ? '%' : '';
+  
+  const count = useSharedValue(0);
+
+  useEffect(() => {
+    count.value = withSpring(numericValue, {
+      damping: 15,
+      stiffness: 100,
+    });
+  }, [numericValue]);
+
+  const animatedProps = useAnimatedProps(() => {
+    const formattedValue = count.value.toLocaleString(undefined, {
+      maximumFractionDigits: suffix === '%' ? 1 : 0,
+    });
+    return {
+      text: `${prefix}${formattedValue}${suffix}`,
+      defaultValue: `${prefix}${formattedValue}${suffix}`,
+    } as any;
+  });
+
   return (
     <View>
       <Card style={styles.card}>
-      {topBorderColor && (
-        <View style={[styles.topBar, { backgroundColor: topBorderColor }]} />
-      )}
-      <View style={styles.header}>
-        <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>{label}</Text>
-        <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
-          <MaterialIcons name={iconName} size={18} color={iconColor} />
+        {topBorderColor && (
+          <View style={[styles.topBar, { backgroundColor: topBorderColor }]} />
+        )}
+        <View style={styles.header}>
+          <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>{label}</Text>
+          <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
+            <MaterialIcons name={iconName} size={18} color={iconColor} />
+          </View>
         </View>
-      </View>
-      <Text style={[styles.value, { color: colors.onSurface }]}>{value}</Text>
-      <View style={styles.trendRow}>
-        <MaterialIcons name={trendIcon} size={16} color={trendColor} />
-        <Text style={[styles.trendText, { color: trendColor }]}>{trendText}</Text>
-      </View>
+        
+        <AnimatedTextInput
+          underlineColorAndroid="transparent"
+          editable={false}
+          style={[styles.value, { color: colors.onSurface }]}
+          animatedProps={animatedProps}
+        />
+
+        <View style={styles.trendRow}>
+          <MaterialIcons name={trendIcon} size={16} color={trendColor} />
+          <Text style={[styles.trendText, { color: trendColor }]}>{trendText}</Text>
+        </View>
       </Card>
     </View>
   );
@@ -82,6 +113,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 8,
+    padding: 0,
+    margin: 0,
   },
   trendRow: {
     flexDirection: 'row',
@@ -93,3 +126,4 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 });
+
