@@ -98,6 +98,31 @@ export function useResults() {
     }
   }, [db, fetchResultsByStudent]);
 
+  const updateResult = useCallback(async (id: number, studentId: number, subject: string, marks: number, totalMarks: number, term: string) => {
+    try {
+      await db.runAsync(
+        'UPDATE results SET subject = ?, marks = ?, total_marks = ?, term = ? WHERE id = ?',
+        [subject, marks, totalMarks, term, id]
+      );
+      await fetchResultsByStudent(studentId);
+      return true;
+    } catch (error) {
+      console.error('Update result failed:', error);
+      return false;
+    }
+  }, [db, fetchResultsByStudent]);
+
+  const deleteResult = useCallback(async (id: number, studentId: number) => {
+    try {
+      await db.runAsync('DELETE FROM results WHERE id = ?', [id]);
+      await fetchResultsByStudent(studentId);
+      return true;
+    } catch (error) {
+      console.error('Delete result failed:', error);
+      return false;
+    }
+  }, [db, fetchResultsByStudent]);
+
   const bulkAddResults = useCallback(async (studentId: number, subjects: { subject: string, marks: number }[], totalMarks: number, term: string) => {
     try {
       const date = new Date().toISOString().split('T')[0];
@@ -122,6 +147,8 @@ export function useResults() {
     fetchGradingRules,
     updateGradingRules,
     addResult,
+    updateResult,
+    deleteResult,
     bulkAddResults
   };
 }

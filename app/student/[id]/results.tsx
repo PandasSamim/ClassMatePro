@@ -55,10 +55,11 @@ export default function StudentResultsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { results, gradingRules, fetchResultsByStudent, fetchGradingRules, updateGradingRules, bulkAddResults } = useResults();
+  const { results, gradingRules, fetchResultsByStudent, fetchGradingRules, updateGradingRules, bulkAddResults, updateResult, deleteResult } = useResults();
 
   const [selectedTerm, setSelectedTerm] = useState<string>('All');
   const [isAddModalVisible, setAddModalVisible] = useState(false);
+  const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [isSettingsVisible, setSettingsVisible] = useState(false);
   
   const [form, setForm] = useState({
@@ -66,6 +67,14 @@ export default function StudentResultsScreen() {
     totalMarks: '100',
     subjectCount: '1',
     subjects: [{ subject: '', marks: '' }]
+  });
+
+  const [editingResult, setEditingResult] = useState<StudentResult | null>(null);
+  const [editForm, setEditForm] = useState({
+    subject: '',
+    marks: '',
+    totalMarks: '',
+    term: ''
   });
 
   const [tempRules, setTempRules] = useState<Omit<GradingRule, 'id'>[]>([]);
@@ -134,6 +143,54 @@ export default function StudentResultsScreen() {
     } else {
       Alert.alert('Error', 'Failed to add results');
     }
+  };
+
+  const openEditModal = (result: StudentResult) => {
+    setEditingResult(result);
+    setEditForm({
+      subject: result.subject,
+      marks: result.marks.toString(),
+      totalMarks: result.total_marks.toString(),
+      term: result.term
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateResult = async () => {
+    if (!editingResult) return;
+    const { subject, marks, totalMarks, term } = editForm;
+    if (!subject || !marks || !totalMarks || !term) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+    const success = await updateResult(editingResult.id, Number(id), subject, parseInt(marks), parseInt(totalMarks), term);
+    if (success) {
+      setEditModalVisible(false);
+      Alert.alert('Success', 'Result updated');
+    } else {
+      Alert.alert('Error', 'Failed to update result');
+    }
+  };
+
+  const handleDeleteResult = (resultId: number) => {
+    Alert.alert(
+      'Delete Result',
+      'Are you sure you want to delete this result?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deleteResult(resultId, Number(id));
+            if (success) {
+              setEditModalVisible(false);
+              Alert.alert('Success', 'Result deleted');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const terms = useMemo(() => {
@@ -323,35 +380,38 @@ export default function StudentResultsScreen() {
                 entering={SlideInRight.delay(300 + idx * 100).duration(500)}
                 layout={Layout.springify()}
               >
-                <Card style={styles.subjectCard}>
-                  <View style={styles.subjectRow}>
-                    <View style={[styles.subjectIcon, { backgroundColor: statusColor + '20' }]}>
-                      <FontAwesome5 name="book-open" size={16} color={statusColor} />
-                    </View>
-                    <View style={styles.subjectInfo}>
-                      <Text style={[styles.subjectName, { color: colors.onSurface }]}>{result.subject}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.termTag, { color: colors.onSurfaceVariant }]}>{result.term}</Text>
-                        <View style={[styles.miniGrade, { backgroundColor: statusColor }]}>
-                           <Text style={styles.miniGradeText}>{grade}</Text>
+                <TouchableOpacity onPress={() => openEditModal(result)}>
+                  <Card style={styles.subjectCard}>
+                    <View style={styles.subjectRow}>
+                      <View style={[styles.subjectIcon, { backgroundColor: statusColor + '20' }]}>
+                        <FontAwesome5 name="book-open" size={16} color={statusColor} />
+                      </View>
+                      <View style={styles.subjectInfo}>
+                        <Text style={[styles.subjectName, { color: colors.onSurface }]}>{result.subject}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.termTag, { color: colors.onSurfaceVariant }]}>{result.term}</Text>
+                          <View style={[styles.miniGrade, { backgroundColor: statusColor }]}>
+                            <Text style={styles.miniGradeText}>{grade}</Text>
+                          </View>
                         </View>
                       </View>
+                      <View style={styles.marksContainer}>
+                        <Text style={[styles.marksValue, { color: colors.onSurface }]}>{result.marks}</Text>
+                        <Text style={[styles.marksTotal, { color: colors.onSurfaceVariant }]}>/{result.total_marks}</Text>
+                      </View>
+                      <MaterialIcons name="edit" size={18} color={colors.outline} style={{ marginLeft: 15 }} />
                     </View>
-                    <View style={styles.marksContainer}>
-                      <Text style={[styles.marksValue, { color: colors.onSurface }]}>{result.marks}</Text>
-                      <Text style={[styles.marksTotal, { color: colors.onSurfaceVariant }]}>/{result.total_marks}</Text>
+                    
+                    <View style={styles.progressBarBg}>
+                      <View 
+                        style={[
+                          styles.progressBarFill, 
+                          { width: `${perc}%`, backgroundColor: statusColor }
+                        ]} 
+                      />
                     </View>
-                  </View>
-                  
-                  <View style={styles.progressBarBg}>
-                    <View 
-                      style={[
-                        styles.progressBarFill, 
-                        { width: `${perc}%`, backgroundColor: statusColor }
-                      ]} 
-                    />
-                  </View>
-                </Card>
+                  </Card>
+                </TouchableOpacity>
               </Animated.View>
             );
           })
@@ -390,6 +450,104 @@ export default function StudentResultsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Edit Result Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeaderInner}>
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Edit Result</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceContainerHigh }]}>
+                <MaterialIcons name="close" size={20} color={colors.onSurface} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.formSection}>
+                <Text style={[styles.formLabel, { color: colors.outline }]}>EXAM TERM</Text>
+                <View style={styles.unitGrid}>
+                  {unitOptions.map(unit => (
+                    <TouchableOpacity
+                      key={unit}
+                      onPress={() => setEditForm(prev => ({...prev, term: unit}))}
+                      style={[
+                        styles.unitChip,
+                        { 
+                          backgroundColor: editForm.term === unit ? colors.primary : colors.surfaceContainerLow,
+                          borderColor: editForm.term === unit ? colors.primary : colors.outlineVariant,
+                        }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.unitChipText, 
+                        { color: editForm.term === unit ? colors.onPrimary : colors.onSurfaceVariant }
+                      ]}>
+                        {unit}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroupFull}>
+                 <Text style={[styles.formLabel, { color: colors.outline }]}>SUBJECT NAME</Text>
+                 <TextInput
+                    style={[styles.formInput, { color: colors.onSurface, backgroundColor: colors.surfaceContainerLow }]}
+                    placeholder="e.g. Mathematics"
+                    value={editForm.subject}
+                    onChangeText={(text) => setEditForm(prev => ({...prev, subject: text}))}
+                  />
+              </View>
+
+              <View style={[styles.formRow, { marginTop: 15 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.formLabel, { color: colors.outline }]}>MARKS OBTAINED</Text>
+                  <TextInput
+                    style={[styles.formInput, { color: colors.onSurface, backgroundColor: colors.surfaceContainerLow }]}
+                    placeholder="85"
+                    keyboardType="numeric"
+                    value={editForm.marks}
+                    onChangeText={(text) => setEditForm(prev => ({...prev, marks: text}))}
+                  />
+                </View>
+                <View style={{ width: 16 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.formLabel, { color: colors.outline }]}>TOTAL MARKS</Text>
+                  <TextInput
+                    style={[styles.formInput, { color: colors.onSurface, backgroundColor: colors.surfaceContainerLow }]}
+                    placeholder="100"
+                    keyboardType="numeric"
+                    value={editForm.totalMarks}
+                    onChangeText={(text) => setEditForm(prev => ({...prev, totalMarks: text}))}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 15, marginTop: 25 }}>
+                <TouchableOpacity 
+                  style={[styles.submitButton, { backgroundColor: colors.errorContainer, flex: 1, marginTop: 0 }]}
+                  onPress={() => editingResult && handleDeleteResult(editingResult.id)}
+                >
+                  <Text style={[styles.submitButtonText, { color: colors.onErrorContainer }]}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.submitButton, { backgroundColor: colors.primary, flex: 2, marginTop: 0 }]}
+                  onPress={handleUpdateResult}
+                >
+                  <Text style={[styles.submitButtonText, { color: colors.onPrimary }]}>Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Settings Modal (Grading Rules) */}
       <Modal
@@ -993,5 +1151,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 12,
     marginTop: 10,
+  },
+  inputGroupFull: {
+    width: '100%',
   },
 });
