@@ -79,9 +79,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   value: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   trendRow: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, StatusBar, Alert, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, StatusBar, Alert, FlatList, ActivityIndicator, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
@@ -39,10 +39,13 @@ export default function StudentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setOffset(0);
-      fetchClasses();
-      fetchStudents(selectedClassId, searchQuery, LIMIT, 0);
-    }, [selectedClassId, searchQuery])
+      const task = InteractionManager.runAfterInteractions(() => {
+        setOffset(0);
+        fetchClasses();
+        fetchStudents(selectedClassId, searchQuery, LIMIT, 0);
+      });
+      return () => task.cancel();
+    }, [selectedClassId, searchQuery, fetchClasses, fetchStudents])
   );
 
   const handleLoadMore = () => {

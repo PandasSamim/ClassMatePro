@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Platform, StatusBar, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Platform, StatusBar, Alert, ActivityIndicator, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
@@ -30,7 +30,10 @@ function DashboardScreen() {
  
   useFocusEffect(
     useCallback(() => {
-      fetchMetrics(undefined, activeFilter?.year, activeFilter?.month);
+      const task = InteractionManager.runAfterInteractions(() => {
+        fetchMetrics(undefined, activeFilter?.year, activeFilter?.month);
+      });
+      return () => task.cancel();
     }, [fetchMetrics, activeFilter])
   );
  
@@ -395,60 +398,64 @@ function DashboardScreen() {
 
         <View style={styles.cardsContainer}>
           {loadingMetrics ? (
-            <View style={{ padding: 40 }}>
+            <View style={{ padding: 40, width: '100%' }}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
             <>
-              <MetricCard 
-                label="TOTAL FEES COLLECTED"
-                value={`₹${metrics.totalFeesCollected.toLocaleString()}`}
-                iconName="account-balance-wallet"
-                iconBgColor={colors.primaryFixed}
-                iconColor={colors.onPrimaryFixed}
-                trendIcon="trending-up"
-                trendText="Synchronized"
-                trendColor={colors.secondary}
-                delay={300}
-              />
+              <View style={styles.metricWrapper}>
+                <MetricCard 
+                  label="COLLECTED"
+                  value={`₹${metrics.totalFeesCollected.toLocaleString()}`}
+                  iconName="account-balance-wallet"
+                  iconBgColor={colors.primaryFixed}
+                  iconColor={colors.onPrimaryFixed}
+                  trendIcon="trending-up"
+                  trendText="Total"
+                  trendColor={colors.secondary}
+                />
+              </View>
 
-              <MetricCard 
-                label="TOTAL DUES"
-                value={`₹${metrics.totalDues.toLocaleString()}`}
-                iconName="warning"
-                iconBgColor={colors.errorContainer}
-                iconColor={colors.onErrorContainer}
-                trendIcon="warning"
-                trendText={`${metrics.totalDues > 0 ? 'Pending dues' : 'No dues'}`}
-                trendColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-                topBorderColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-                delay={400}
-              />
+              <View style={styles.metricWrapper}>
+                <MetricCard 
+                  label="DUES"
+                  value={`₹${metrics.totalDues.toLocaleString()}`}
+                  iconName="warning"
+                  iconBgColor={colors.errorContainer}
+                  iconColor={colors.onErrorContainer}
+                  trendIcon="warning"
+                  trendText={`${metrics.totalDues > 0 ? 'Pending' : 'No dues'}`}
+                  trendColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
+                  topBorderColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
+                />
+              </View>
 
-              <MetricCard 
-                label="NUMBER OF STUDENTS"
-                value={metrics.totalStudents.toString()}
-                iconName="groups"
-                iconBgColor={colors.tertiaryContainer}
-                iconColor={colors.onTertiaryContainer}
-                trendIcon="sync"
-                trendText="Latest enrollments"
-                trendColor={colors.secondary}
-                delay={500}
-              />
+              <View style={styles.metricWrapper}>
+                <MetricCard 
+                  label="STUDENTS"
+                  value={metrics.totalStudents.toString()}
+                  iconName="groups"
+                  iconBgColor={colors.tertiaryContainer}
+                  iconColor={colors.onTertiaryContainer}
+                  trendIcon="sync"
+                  trendText="Total"
+                  trendColor={colors.secondary}
+                />
+              </View>
 
-              <MetricCard 
-                label="ATTENDANCE %"
-                value={`${metrics.attendancePercentage.toFixed(1)}%`}
-                iconName="check-circle"
-                iconBgColor={colors.secondaryContainer}
-                iconColor={colors.onSecondaryContainer}
-                trendIcon="info"
-                trendText="Monthly update"
-                trendColor={colors.outline}
-                topBorderColor={colors.secondary}
-                delay={600}
-              />
+              <View style={styles.metricWrapper}>
+                <MetricCard 
+                  label="ATTENDANCE"
+                  value={`${metrics.attendancePercentage.toFixed(1)}%`}
+                  iconName="check-circle"
+                  iconBgColor={colors.secondaryContainer}
+                  iconColor={colors.onSecondaryContainer}
+                  trendIcon="info"
+                  trendText="Current"
+                  trendColor={colors.outline}
+                  topBorderColor={colors.secondary}
+                />
+              </View>
             </>
           )}
         </View>
@@ -572,6 +579,12 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   cardsContainer: {
-    gap: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  metricWrapper: {
+    width: '48.5%',
   },
 });
