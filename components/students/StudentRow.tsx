@@ -16,6 +16,7 @@ interface StudentRowProps {
   status: string;
   statusVariant: BadgeVariant;
   statusOutlined?: boolean;
+  badgeIcon?: keyof typeof MaterialIcons.glyphMap;
   onPress?: () => void;
   onMorePress?: () => void;
   onDelete?: () => void;
@@ -23,7 +24,7 @@ interface StudentRowProps {
 
 export function StudentRow({ 
   name, avatarInitials, avatarUrl, avatarBg, avatarText, 
-  status, statusVariant, statusOutlined, onPress, onMorePress, onDelete 
+  status, statusVariant, statusOutlined, badgeIcon, onPress, onMorePress, onDelete 
 }: StudentRowProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -49,7 +50,7 @@ export function StudentRow({
       </View>
       
       <View style={styles.statusColumn}>
-        <Badge label={status} variant={statusVariant} outlined={statusOutlined} />
+        <Badge label={status} variant={statusVariant} outlined={statusOutlined} badgeIcon={badgeIcon} />
       </View>
       
       <View style={styles.actionColumn}>

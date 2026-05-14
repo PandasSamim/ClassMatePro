@@ -14,8 +14,10 @@ import { StudentHeroCard } from '@/components/student/StudentHeroCard';
 import { AttendanceStatsCard } from '@/components/student/AttendanceStatsCard';
 import { GuardianInfoCard } from '@/components/student/GuardianInfoCard';
 import { AcademicOverviewCard } from '@/components/student/AcademicOverviewCard';
-import { PaymentHistoryCard } from '@/components/student/PaymentHistoryCard';
+import { YearlyFeeCard } from '@/components/student/YearlyFeeCard';
+import { TotalDueCard } from '@/components/student/TotalDueCard';
 import { PaymentModal } from '@/components/student/PaymentModal';
+import { PaymentDetailsModal } from '@/components/student/PaymentDetailsModal';
 
 export default function StudentProfileScreen() {
   const colorScheme = useColorScheme();
@@ -33,6 +35,7 @@ export default function StudentProfileScreen() {
 
   // Payment Modal State
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [isDetailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedFee, setSelectedFee] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
@@ -63,6 +66,15 @@ export default function StudentProfileScreen() {
     }
   };
 
+  const handleCardPress = (fee: any, action: 'pay' | 'details') => {
+    if (action === 'pay') {
+      handleOpenPayment(fee);
+    } else if (action === 'details') {
+      setSelectedFee(fee);
+      setDetailsModalVisible(true);
+    }
+  };
+
   const fetchMonthlyStats = useCallback(async (date: Date) => {
     if (!id) return;
     const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
@@ -78,6 +90,7 @@ export default function StudentProfileScreen() {
         const studentId = Number(id);
         fetchStudentById(studentId).then(setStudent);
         fetchResultsByStudent(studentId);
+        fetchFeesByStudent(studentId);
 
         if (hasCalculatedRef.current !== studentId) {
           calculateFees(studentId).then(() => {
@@ -85,7 +98,7 @@ export default function StudentProfileScreen() {
           });
         }
       }
-    }, [id, calculateFees, fetchStudentById])
+    }, [id, calculateFees, fetchStudentById, fetchFeesByStudent, fetchResultsByStudent])
   );
 
   useEffect(() => {
@@ -95,10 +108,12 @@ export default function StudentProfileScreen() {
   }, [id, selectedMonth, fetchMonthlyStats]);
 
   const navigateMonth = (direction: number) => {
-    const newDate = new Date(selectedMonth);
-    newDate.setMonth(newDate.getMonth() + direction);
     const today = new Date();
-    if (newDate > new Date(today.getFullYear(), today.getMonth(), 1)) return;
+    const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const newDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + direction, 1);
+    
+    if (newDate > startOfCurrentMonth) return;
     setSelectedMonth(newDate);
   };
 
@@ -126,6 +141,10 @@ export default function StudentProfileScreen() {
     });
   }, [results, colors]);
 
+  const totalDueSum = useMemo(() => {
+    return fees.reduce((sum, f) => sum + (f.due_amount || 0), 0);
+  }, [fees]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -135,8 +154,8 @@ export default function StudentProfileScreen() {
         colors={colors}
         studentName={studentName}
         studentId={id ? String(id) : ''}
-        onEditPress={() => router.push({ pathname: '/add-student', params: { id } })}
-        onResultsPress={() => router.push({ pathname: '/student/[id]/results', params: { id, name: studentName } })}
+        onEditPress={() => router.push({ pathname: '/add-student', params: { id: id as string } })}
+        onResultsPress={() => router.push({ pathname: '/student/[id]/results', params: { id: id as string, name: studentName } })}
       />
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
@@ -147,6 +166,7 @@ export default function StudentProfileScreen() {
           studentId={`CMP#${new Date().getFullYear().toString().slice(-2)}-${String(student?.id).padStart(3, '0')}`}
           studentPhone={student?.phone || 'No Phone'}
           avatarUrl={student?.avatar_url || (avatarUrl ? String(avatarUrl) : undefined)}
+          joiningDate={student?.enrollment_date}
         />
 
         {/* Bento Grid */}
@@ -175,14 +195,16 @@ export default function StudentProfileScreen() {
           </View>
         </View>
 
-        <PaymentHistoryCard 
+        <TotalDueCard 
+          colors={colors}
+          totalDue={totalDueSum}
+        />
+
+        <YearlyFeeCard 
           colors={colors}
           fees={fees}
-          onPayPress={handleOpenPayment}
-          onViewAll={() => router.push({
-            pathname: '/student/payment-history',
-            params: { id: student?.id, name: student?.name }
-          })}
+          joiningDate={student?.enrollment_date}
+          onCardPress={handleCardPress}
         />
       </ScrollView>
 
@@ -194,6 +216,13 @@ export default function StudentProfileScreen() {
         onAmountChange={setPaymentAmount}
         onClose={() => setPaymentModalVisible(false)}
         onConfirm={handleMakePayment}
+      />
+
+      <PaymentDetailsModal 
+        visible={isDetailsModalVisible}
+        colors={colors}
+        fee={selectedFee}
+        onClose={() => setDetailsModalVisible(false)}
       />
     </View>
   );

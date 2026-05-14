@@ -117,6 +117,7 @@ export async function migrateDbIfNeeded(db: SQLite.SQLiteDatabase) {
           attendance_rate REAL DEFAULT 0,
           status TEXT CHECK(status IN ('paid', 'due', 'partial', 'waived')) DEFAULT 'due',
           due_date TEXT,
+          paid_at TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           UNIQUE(student_id, month),
           FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
@@ -156,6 +157,12 @@ export async function migrateDbIfNeeded(db: SQLite.SQLiteDatabase) {
         }
         await db.runAsync('DROP TABLE fees_old');
         console.log("Migration complete.");
+      }
+
+      const hasPaidAt = feesInfo.some(col => col.name === 'paid_at');
+      if (!hasPaidAt) {
+        console.log('Adding paid_at to fees table...');
+        await db.runAsync('ALTER TABLE fees ADD COLUMN paid_at TEXT');
       }
 
       // Final cleanup: convert any remaining legacy month formats to YYYY-MM

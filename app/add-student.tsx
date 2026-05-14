@@ -49,7 +49,9 @@ export default function AddStudentScreen() {
           setGuardianPhone(student.guardian_phone || '');
           setImageUri(student.avatar_url || null);
           setStatus(student.status || 'Enrolled');
-          // Note: In a real app we'd fetch join date from DB, using today for now
+          if (student.enrollment_date) {
+            setJoiningDate(student.enrollment_date.split('T')[0]);
+          }
         }
       });
     }
@@ -122,7 +124,7 @@ export default function AddStudentScreen() {
       enrollment_date: new Date(joiningDate).toISOString()
     };
 
-    let success = false;
+    let success: boolean | number = false;
     if (isEditing) {
       success = await updateStudent(Number(id), studentData);
     } else {
@@ -130,9 +132,7 @@ export default function AddStudentScreen() {
     }
 
     if (success) {
-      Alert.alert('Success', `Student ${isEditing ? 'updated' : 'added'} successfully!`, [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      router.back();
     } else {
       Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'save'} student.`);
     }
@@ -147,25 +147,23 @@ export default function AddStudentScreen() {
       <Animated.View 
         entering={FadeInUp.duration(600).springify()}
         style={[styles.header, { 
-          backgroundColor: colors.surfaceContainerLowest, 
-          borderBottomColor: colors.surfaceVariant,
-          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 20 
+          backgroundColor: colors.surface, 
+          paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 50 
         }]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
-          <MaterialIcons name="arrow-back" size={24} color={colors.onSurface} />
+          <MaterialIcons name="arrow-back-ios" size={22} color={colors.onSurface} />
         </TouchableOpacity>
         
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>{isEditing ? 'Edit Student' : 'Add New Student'}</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.onSurfaceVariant }]}>Administrative Section</Text>
+          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>{isEditing ? 'Edit Student' : 'New Student'}</Text>
         </View>
 
         <TouchableOpacity 
-          style={[styles.saveIcon, { backgroundColor: colors.primaryContainer }]}
+          style={styles.headerSaveButton}
           onPress={handleSave}
         >
-          <MaterialIcons name="check" size={24} color={colors.onPrimaryContainer} />
+          <Text style={[styles.headerSaveText, { color: colors.primary }]}>Save</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -174,26 +172,29 @@ export default function AddStudentScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-          <View style={[styles.formContainer, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+          
+          <Animated.View entering={FadeInUp.delay(100).duration(600).springify()} style={[styles.formContainer, { backgroundColor: colors.surfaceContainerLowest }]}>
 
             {/* Photo Upload Section */}
-            <View style={[styles.photoSection, { borderBottomColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}>
+            <View style={styles.photoSection}>
               <TouchableOpacity
                 style={styles.avatarWrapper}
                 onPress={pickImage}
               >
-                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceVariant, borderColor: colors.outline }, imageUri ? { borderStyle: 'solid' } : {}]}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant }, imageUri ? { borderStyle: 'solid', borderWidth: 0 } : {}]}>
                   {imageUri ? (
-                    <Image source={{ uri: imageUri }} style={{ width: 124, height: 124, borderRadius: 62 }} />
+                    <Image source={{ uri: imageUri }} style={{ width: 120, height: 120, borderRadius: 60 }} />
                   ) : (
-                    <MaterialIcons name="person" size={48} color={colors.outline} />
+                    <MaterialIcons name="camera-alt" size={40} color={colors.outline} />
                   )}
                 </View>
-                <View style={[styles.avatarBadge, { backgroundColor: colors.primary, borderColor: colors.surfaceContainerLowest }]}>
-                  <MaterialIcons name="add-a-photo" size={16} color={colors.onPrimary} />
-                </View>
+                {!imageUri && (
+                  <View style={[styles.avatarBadge, { backgroundColor: colors.primary, borderColor: colors.surfaceContainerLowest }]}>
+                    <MaterialIcons name="add" size={18} color={colors.onPrimary} />
+                  </View>
+                )}
               </TouchableOpacity>
-              <Text style={[styles.photoText, { color: colors.onSurfaceVariant }]}>UPLOAD PORTRAIT</Text>
+              <Text style={[styles.photoText, { color: colors.onSurfaceVariant }]}>{imageUri ? 'Tap to change photo' : 'Upload Student Photo'}</Text>
             </View>
 
             {/* Form Fields Section */}
@@ -201,25 +202,25 @@ export default function AddStudentScreen() {
 
               {/* Full Name */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Full Name</Text>
+                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Full Name <Text style={{color: colors.error}}>*</Text></Text>
                 <TextInput
-                  style={[styles.input, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
+                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="Student Name"
+                  placeholder="e.g. John Doe"
                   placeholderTextColor={colors.outline}
                 />
               </View>
 
               {/* Class */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Class</Text>
+                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Class <Text style={{color: colors.error}}>*</Text></Text>
                 <TouchableOpacity
-                  style={[styles.input, styles.dropdownInput, { borderBottomColor: colors.outlineVariant }]}
+                  style={[styles.input, styles.dropdownInput, { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   onPress={() => setClassModalVisible(true)}
                 >
-                  <Text style={{ color: colors.onSurface, fontSize: 16 }}>{studentClassName}</Text>
-                  <MaterialIcons name="expand-more" size={24} color={colors.outline} />
+                  <Text style={{ color: classId ? colors.onSurface : colors.outline, fontSize: 16 }}>{classId ? studentClassName : 'Select a class'}</Text>
+                  <MaterialIcons name="keyboard-arrow-down" size={24} color={colors.outline} />
                 </TouchableOpacity>
               </View>
 
@@ -227,18 +228,18 @@ export default function AddStudentScreen() {
               <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
                   <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Monthly Fees</Text>
-                  <Text style={[styles.hint, { color: colors.outline }]}>Auto-filled from class</Text>
+                  <Text style={[styles.hint, { color: colors.outline }]}>Auto-filled</Text>
                 </View>
                 <View style={styles.inputWithPrefix}>
                   <Text style={[styles.prefix, { color: colors.onSurface }]}>₹</Text>
                   <TextInput
-                    style={[styles.input, styles.inputPrefixed, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
+                    style={[styles.input, styles.inputPrefixed, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     value={monthlyFees}
                     onChangeText={setMonthlyFees}
                     keyboardType="numeric"
-                    placeholder="0000"
+                    placeholder="0"
                     placeholderTextColor={colors.outline}
-                    editable={!isEditing} // Only editable for new students, linked to class for existing
+                    editable={!isEditing}
                   />
                 </View>
               </View>
@@ -247,11 +248,11 @@ export default function AddStudentScreen() {
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Contact Number</Text>
                 <TextInput
-                  style={[styles.input, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
+                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   value={contactNumber}
                   onChangeText={setContactNumber}
                   keyboardType="phone-pad"
-                  placeholder="XXXXXXXXXX"
+                  placeholder="10-digit mobile number"
                   placeholderTextColor={colors.outline}
                 />
               </View>
@@ -264,10 +265,10 @@ export default function AddStudentScreen() {
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Guardian Name</Text>
                 <TextInput
-                  style={[styles.input, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
+                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   value={guardianName}
                   onChangeText={setGuardianName}
-                  placeholder="Guardian Name"
+                  placeholder="e.g. Robert Doe"
                   placeholderTextColor={colors.outline}
                 />
               </View>
@@ -275,60 +276,54 @@ export default function AddStudentScreen() {
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Guardian Phone</Text>
                 <TextInput
-                  style={[styles.input, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
+                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   value={guardianPhone}
                   onChangeText={setGuardianPhone}
                   keyboardType="phone-pad"
-                  placeholder="XXXXXXXXXX"
+                  placeholder="10-digit mobile number"
                   placeholderTextColor={colors.outline}
                 />
               </View>
 
-              {/* Joining Date (Only for new students for simplicity) */}
-              {!isEditing && (
-                <View style={styles.inputGroup}>
-                  <View style={styles.labelRow}>
-                    <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Joining Date</Text>
-                    <Text style={[styles.hint, { color: colors.outline }]}>Tap to edit</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.inputWithIcon}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <TextInput
-                      style={[styles.input, styles.inputWithIconPadding, { color: colors.onSurface, borderBottomColor: colors.outlineVariant }]}
-                      value={joiningDate}
-                      editable={false}
-                      pointerEvents="none"
-                    />
-                    <MaterialIcons name="calendar-today" size={20} color={colors.outline} style={styles.suffixIcon} />
-                  </TouchableOpacity>
+              {/* Joining Date */}
+               <View style={styles.inputGroup}>
+                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Joining Date</Text>
+                 <TouchableOpacity
+                   style={styles.inputWithIcon}
+                   onPress={() => setShowDatePicker(true)}
+                 >
+                   <TextInput
+                     style={[styles.input, styles.inputWithIconPadding, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                     value={joiningDate}
+                     editable={false}
+                     pointerEvents="none"
+                   />
+                   <MaterialIcons name="event" size={22} color={colors.outline} style={styles.suffixIcon} />
+                 </TouchableOpacity>
 
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={new Date(joiningDate)}
-                      mode="date"
-                      display="default"
-                      onChange={onDateChange}
-                    />
-                  )}
-                </View>
-              )}
+                 {showDatePicker && (
+                   <DateTimePicker
+                     value={new Date(joiningDate)}
+                     mode="date"
+                     display="default"
+                     onChange={onDateChange}
+                   />
+                 )}
+               </View>
 
             </View>
 
             {/* Action Button Section */}
-            <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.outlineVariant }]}>
+            <View style={styles.footer}>
               <TouchableOpacity
                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
               >
-                <MaterialIcons name={isEditing ? "save" : "person-add"} size={20} color={colors.onPrimary} />
                 <Text style={[styles.submitButtonText, { color: colors.onPrimary }]}>{isEditing ? 'Save Changes' : 'Add Student'}</Text>
               </TouchableOpacity>
             </View>
 
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -344,7 +339,7 @@ export default function AddStudentScreen() {
           activeOpacity={1}
           onPress={() => setClassModalVisible(false)}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surfaceContainerLowest }]}>
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Select Class</Text>
             {classes.map((cls) => (
               <TouchableOpacity
@@ -360,12 +355,12 @@ export default function AddStudentScreen() {
                 <Text style={[
                   styles.modalOptionText,
                   { color: colors.onSurface },
-                  classId === cls.id && { color: colors.primary, fontWeight: '700' }
+                  classId === cls.id && { color: colors.primary, fontWeight: '600' }
                 ]}>
                   {cls.name}
                 </Text>
                 {classId === cls.id && (
-                  <MaterialIcons name="check" size={20} color={colors.primary} />
+                  <MaterialIcons name="check-circle" size={22} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -384,62 +379,61 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    zIndex: 10,
   },
   headerBackButton: {
     padding: 8,
-    marginLeft: -8,
+    marginRight: 8,
   },
   headerTitleContainer: {
     flex: 1,
-    marginLeft: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.5,
   },
-  headerSubtitle: {
-    fontSize: 12,
+  headerSaveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  saveIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   contentContainer: {
-    padding: 24,
-    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
-    maxWidth: 768,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    overflow: 'hidden',
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 24,
+    elevation: 5,
+    overflow: 'hidden',
   },
   photoSection: {
-    padding: 40,
+    paddingVertical: 32,
     alignItems: 'center',
-    borderBottomWidth: 1,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   avatarPlaceholder: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
@@ -447,65 +441,44 @@ const styles = StyleSheet.create({
   },
   avatarBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    bottom: 4,
+    right: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
   photoText: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
+    fontSize: 14,
+    fontWeight: '500',
   },
   formFields: {
-    padding: 20,
-    gap: 12,
+    paddingHorizontal: 24,
+    gap: 20,
   },
   inputGroup: {
-    marginBottom: 12,
-  },
-  sectionDivider: {
-    marginTop: 8,
-    marginBottom: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  sectionDividerText: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    gap: 8,
   },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
+    marginBottom: 4,
   },
   hint: {
-    fontSize: 10,
-    fontWeight: '400',
+    fontSize: 12,
   },
   input: {
-    backgroundColor: '#F3F4F6',
-    borderBottomWidth: 2,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
   },
   inputWithPrefix: {
@@ -519,7 +492,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   inputPrefixed: {
-    paddingLeft: 32,
+    paddingLeft: 36,
   },
   dropdownInput: {
     flexDirection: 'row',
@@ -531,51 +504,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inputWithIconPadding: {
-    paddingRight: 40,
+    paddingRight: 48,
   },
   suffixIcon: {
     position: 'absolute',
     right: 16,
   },
+  sectionDivider: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  sectionDividerText: {
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
   footer: {
-    padding: 40,
-    borderTopWidth: 1,
-    alignItems: 'flex-end',
+    padding: 24,
+    paddingTop: 32,
   },
   submitButton: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderRadius: 9999,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  submitButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 12,
-    padding: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 3,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 18,

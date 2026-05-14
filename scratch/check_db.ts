@@ -1,12 +1,15 @@
 import * as SQLite from 'expo-sqlite';
 
-async function checkAttendance() {
+async function checkFees() {
   const db = await SQLite.openDatabaseAsync('classmatepro.db');
-  const result = await db.getAllAsync('SELECT status, COUNT(*) as count FROM attendance GROUP BY status');
-  console.log('Attendance breakdown:', JSON.stringify(result, null, 2));
+  const students = await db.getAllAsync('SELECT id, first_name, enrollment_date FROM students');
+  console.log('Students:', JSON.stringify(students, null, 2));
   
-  const allData = await db.getAllAsync('SELECT * FROM attendance LIMIT 10');
-  console.log('Sample attendance data:', JSON.stringify(allData, null, 2));
+  const fees = await db.getAllAsync('SELECT * FROM fees');
+  console.log('Fees:', JSON.stringify(fees, null, 2));
+  
+  const classes = await db.getAllAsync('SELECT * FROM classes');
+  console.log('Classes:', JSON.stringify(classes, null, 2));
 }
 
-checkAttendance().catch(console.error);
+checkFees();

@@ -210,7 +210,8 @@ export default function StudentsScreen() {
                 avatarBg={colors.primaryContainer}
                 avatarText={colors.onPrimaryContainer}
                 status={s.status}
-                statusVariant={s.status.toLowerCase() === 'absent' ? 'error' : s.status.toLowerCase() === 'enrolled' ? 'neutral' : 'success'}
+                statusVariant={s.status.toLowerCase() === 'enrolled' ? 'success' : s.status.toLowerCase() === 'absent' ? 'error' : 'neutral'}
+                badgeIcon={s.status.toLowerCase() === 'enrolled' ? 'verified' : undefined}
                 statusOutlined={s.status.toLowerCase() === 'absent'}
                 onPress={() => router.push({ 
                   pathname: '/student/[id]', 

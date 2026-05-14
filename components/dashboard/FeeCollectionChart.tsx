@@ -1,36 +1,39 @@
 import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { LineChart } from "react-native-gifted-charts";
+import { LineChart } from "react-native-chart-kit";
 import { MaterialIcons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { ClassSeries, ChartDataPoint } from '@/hooks/useDashboard';
+import { ClassSeries } from '@/hooks/useDashboard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSeries[], delay?: number }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const maxValue = useMemo(() => {
-    if (!data || data.length === 0) return 1000;
-    let highest = 0;
-    data.forEach(series => {
-      series.data.forEach(point => {
-        if (point.value > highest) highest = point.value;
-      });
-    });
-    return Math.max(Math.ceil(highest * 1.2 / 100) * 100, 500);
-  }, [data]);
-
   const VIBRANT_PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
-  const chartLines = useMemo(() => {
-    return data.map((series, index) => ({
-      data: series.data.map(p => ({ value: p.value, label: p.label })),
-      color: VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
-      thickness: 3,
+  const chartData = useMemo(() => {
+    if (data.length === 0) return null;
+    
+    // Assuming all series have the same labels in the same order
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const labels = data[0].data.map(p => {
+      const monthIdx = parseInt(p.label) - 1;
+      return monthNames[monthIdx] || p.label;
+    });
+    
+    const datasets = data.map((series, index) => ({
+      data: series.data.map(p => p.value),
+      color: (opacity = 1) => VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
+      strokeWidth: 3,
     }));
+
+    return {
+      labels,
+      datasets,
+    };
   }, [data]);
 
   const legendItems = useMemo(() => {
@@ -39,6 +42,21 @@ export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSerie
       color: VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
     }));
   }, [data]);
+
+  const chartConfig = {
+    backgroundColor: 'transparent',
+    backgroundGradientFrom: colors.surfaceContainerLowest,
+    backgroundGradientTo: colors.surfaceContainerLowest,
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientToOpacity: 0,
+    decimalPlaces: 0,
+    color: (opacity = 1) => colors.outlineVariant, // for grid lines
+    labelColor: (opacity = 1) => colors.outline, // for labels
+    propsForDots: {
+      r: "4",
+    },
+    useShadowColorFromDataset: false,
+  };
 
   return (
     <Animated.View entering={FadeInDown.delay(delay).duration(600).springify()}>
@@ -64,42 +82,20 @@ export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSerie
         </View>
 
         <View style={styles.chartWrapper}>
-          {chartLines.length > 0 ? (
+          {chartData && chartData.datasets.length > 0 ? (
             <LineChart
-              data={chartLines[0].data}
-              data2={chartLines[1]?.data}
-              data3={chartLines[2]?.data}
-              data4={chartLines[3]?.data}
-              data5={chartLines[4]?.data}
-              color={chartLines[0].color}
-              color2={chartLines[1]?.color}
-              color3={chartLines[2]?.color}
-              color4={chartLines[3]?.color}
-              color5={chartLines[4]?.color}
-              dataPointsColor1={chartLines[0].color}
-              dataPointsColor2={chartLines[1]?.color}
-              dataPointsColor3={chartLines[2]?.color}
-              dataPointsColor4={chartLines[3]?.color}
-              dataPointsColor5={chartLines[4]?.color}
-              thickness={3}
-              noOfSections={4}
-              maxValue={maxValue}
+              data={chartData}
+              width={Dimensions.get('window').width - 90}
               height={180}
-              width={Dimensions.get('window').width - 100}
-              initialSpacing={20}
-              spacing={50}
-              yAxisThickness={0}
-              xAxisThickness={0}
-              rulesColor={colors.surfaceVariant}
-              rulesType="dashed"
-              yAxisTextStyle={{ color: colors.outline, fontSize: 10 }}
-              xAxisLabelTextStyle={{ color: colors.outline, fontSize: 10 }}
-              yAxisLabelPrefix="₹"
-              hideDataPoints={false}
-              dataPointsRadius={4}
-              showValuesAsDataPointsText={false}
-              animateOnDataChange
-              animationDuration={1000}
+              yAxisLabel="₹"
+              yAxisSuffix=""
+              chartConfig={chartConfig}
+              bezier
+              style={{
+                marginLeft: -10,
+                borderRadius: 16
+              }}
+              fromZero={true}
             />
           ) : (
             <View style={styles.emptyContainer}>

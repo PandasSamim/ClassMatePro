@@ -12,6 +12,7 @@ export interface Fee {
   attendance_rate: number;
   status: 'paid' | 'partial' | 'due' | 'waived';
   due_date?: string;
+  paid_at?: string;
   created_at: string;
 }
 
@@ -20,20 +21,20 @@ export const useFees = () => {
   const [fees, setFees] = useState<Fee[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchFeesByStudent = useCallback(async (studentId: number, limit: number = 4, offset: number = 0) => {
+  const fetchFeesByStudent = useCallback(async (studentId: number, limit: number = 48, offset: number = 0) => {
     setLoading(true);
     try {
       // 1. Strictly ignore and hide the current month in the UI.
       const now = new Date();
       const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // 3. Paginated transaction history records (including current month)
+      // 3. Paginated transaction history records
       const result = await db.getAllAsync<Fee>(`
         SELECT * FROM fees 
-        WHERE student_id = ?
+        WHERE student_id = ? AND month < ?
         ORDER BY month DESC
         LIMIT ? OFFSET ?
-      `, [studentId, limit, offset]);
+      `, [studentId, currentMonthKey, limit, offset]);
 
       console.log(`[Fee Fetch] Student ${studentId} loaded ${result.length} records at offset ${offset}.`);
       
@@ -58,9 +59,9 @@ export const useFees = () => {
 
       const result = await db.getAllAsync<Fee>(`
         SELECT * FROM fees 
-        WHERE student_id = ?
+        WHERE student_id = ? AND month < ?
         ORDER BY month DESC
-      `, [studentId]);
+      `, [studentId, currentMonthKey]);
 
       return result;
     } catch (error: any) {
@@ -88,9 +89,9 @@ export const useFees = () => {
 
       await db.runAsync(`
         UPDATE fees 
-        SET paid_amount = ?, due_amount = ?, status = ? 
+        SET paid_amount = ?, due_amount = ?, status = ?, paid_at = ? 
         WHERE id = ?
-      `, [newPaidAmount, newDueAmount, newStatus, feeId]);
+      `, [newPaidAmount, newDueAmount, newStatus, new Date().toISOString(), feeId]);
 
       await fetchFeesByStudent(fee.student_id);
       return true;
@@ -165,8 +166,8 @@ export const useFees = () => {
       await fetchFeesByStudent(studentId);
       await deduplicateFees(studentId);
 
-      const student = await db.getFirstAsync<{ created_at: string, monthly_fees: number }>(`
-        SELECT s.created_at, c.monthly_fees 
+      const student = await db.getFirstAsync<{ enrollment_date: string, monthly_fees: number }>(`
+        SELECT s.enrollment_date, c.monthly_fees 
         FROM students s
         JOIN classes c ON s.class_id = c.id
         WHERE s.id = ?
@@ -177,15 +178,14 @@ export const useFees = () => {
         return;
       }
 
-      // BULLETPROOF DATE PARSING
       let enrollmentDate: Date;
       try {
-        if (!student.created_at) {
+        if (!student.enrollment_date) {
           enrollmentDate = new Date();
-        } else if (!isNaN(Number(student.created_at))) {
-          enrollmentDate = new Date(Number(student.created_at));
+        } else if (!isNaN(Number(student.enrollment_date))) {
+          enrollmentDate = new Date(Number(student.enrollment_date));
         } else {
-          enrollmentDate = new Date(student.created_at.replace(' ', 'T'));
+          enrollmentDate = new Date(student.enrollment_date.replace(' ', 'T'));
         }
 
         if (isNaN(enrollmentDate.getTime())) {
@@ -209,7 +209,7 @@ export const useFees = () => {
         DELETE FROM fees 
         WHERE student_id = ? 
         AND month < ? 
-        AND paid_amount = 0
+        AND (paid_amount = 0 OR paid_amount IS NULL)
       `, [studentId, enrollmentMonthKey]);
 
       const existingFees = await db.getAllAsync<Fee>('SELECT * FROM fees WHERE student_id = ?', [studentId]);
@@ -249,7 +249,7 @@ export const useFees = () => {
       // 2. Begin checking from exact Join Date up until the previous month
       let dateCursor = new Date(enrollmentDate.getFullYear(), enrollmentDate.getMonth(), 1);
       const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
-
+      
       let calculationCount = 0;
 
       await db.withTransactionAsync(async () => {

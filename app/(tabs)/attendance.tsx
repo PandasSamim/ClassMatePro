@@ -10,6 +10,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
 
@@ -18,6 +19,7 @@ export default function AttendanceScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('monthly');
   const [offset, setOffset] = useState(0);
@@ -88,6 +90,21 @@ export default function AttendanceScreen() {
     setMonthlyStats(summary);
   };
 
+  const onDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(false);
+    if (date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      if (viewMode === 'daily') {
+        setSelectedDate(`${year}-${month}-${day}`);
+      } else {
+        setCurrentMonthKey(`${year}-${month}`);
+      }
+    }
+  };
+
   const navigateMonth = (direction: number) => {
     const [y, m] = currentMonthKey.split('-').map(Number);
     const date = new Date(y, m - 1 + direction, 1);
@@ -144,7 +161,7 @@ export default function AttendanceScreen() {
     console.log(`Bulk status result: ${success}`);
     if (success) {
       await fetchAttendanceByDate(selectedDate, selectedClassId || undefined);
-      Alert.alert("Success", `All students marked as ${status}.`);
+      // Removed Alert.alert here
     } else {
       Alert.alert("Error", "Failed to update attendance records.");
     }
@@ -230,15 +247,18 @@ export default function AttendanceScreen() {
             <MaterialIcons name="chevron-left" size={24} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
           
-          <View style={[styles.dateDisplay, { backgroundColor: colors.surface }]}>
-            <MaterialIcons name="calendar-today" size={16} color={colors.onSurface} />
+          <TouchableOpacity 
+            style={[styles.dateDisplay, { backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <MaterialIcons name="calendar-today" size={16} color={colors.primary} />
             <Text style={[styles.dateText, { color: colors.onSurface }]}>
               {viewMode === 'daily' 
                 ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                 : new Date(currentMonthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
               }
             </Text>
-          </View>
+          </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.iconButton, isAtFutureEnd && { opacity: 0.2 }]} 
@@ -248,6 +268,16 @@ export default function AttendanceScreen() {
             <MaterialIcons name="chevron-right" size={24} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
         </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={viewMode === 'daily' ? new Date(selectedDate) : new Date(currentMonthKey + '-01')}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={onDateChange}
+          />
+        )}
       </View>
       {/* Summary Cards */}
       {viewMode === 'daily' && (

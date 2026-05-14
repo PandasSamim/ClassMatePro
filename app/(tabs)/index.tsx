@@ -24,6 +24,7 @@ function DashboardScreen() {
   
   const [isFilterVisible, setFilterVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState<{year: number, month: number} | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { metrics, chartData, attendanceBreakdown, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
   const { settings } = useGlobalSettings();
  
@@ -49,7 +50,9 @@ function DashboardScreen() {
     : 'All Time';
  
   const handleDownloadReport = async () => {
+    if (isGeneratingPdf) return;
     try {
+      setIsGeneratingPdf(true);
       const html = `
 <!DOCTYPE html>
 <html>
@@ -161,6 +164,46 @@ function DashboardScreen() {
       .progress-bg { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
       .progress-fill { height: 100%; border-radius: 3px; background: #1a56db; }
       
+      .revenue-chart {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        height: 200px;
+        padding: 20px 40px;
+        background: #f8fafc;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        gap: 15px;
+      }
+      
+      .bar-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+      }
+      
+      .bar-container {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        margin: 8px 0;
+      }
+      
+      .bar-fill {
+        width: 30px;
+        background: #1a56db;
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        transition: height 0.3s ease;
+      }
+      
+      .bar-label { font-size: 9px; font-weight: 700; color: #1a56db; margin-bottom: 4px; }
+      .bar-name { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+      
       .footer {
         margin-top: auto;
         padding-top: 30px;
@@ -212,6 +255,39 @@ function DashboardScreen() {
       <div class="metric-card">
         <div class="metric-label">Average Attendance</div>
         <div class="metric-value">${metrics.attendancePercentage.toFixed(1)}%</div>
+      </div>
+    </div>
+    
+    <div class="chart-section">
+      <div class="section-header">Fee Revenue Analysis</div>
+      <div class="revenue-chart">
+        ${(() => {
+          // Aggregate data by label across all series
+          const totalsByLabel: Record<string, number> = {};
+          chartData.forEach(series => {
+            series.data.forEach(p => {
+              totalsByLabel[p.label] = (totalsByLabel[p.label] || 0) + p.value;
+            });
+          });
+          
+          const labels = Object.keys(totalsByLabel);
+          const maxVal = Math.max(...Object.values(totalsByLabel), 1);
+          const monthMap: Record<string, string> = {
+            '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+            '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
+            '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
+          };
+          
+          return labels.map(label => `
+            <div class="bar-group">
+              <div class="bar-label">₹${(totalsByLabel[label] / 1000).toFixed(1)}k</div>
+              <div class="bar-container">
+                <div class="bar-fill" style="height: ${(totalsByLabel[label] / maxVal) * 100}%"></div>
+              </div>
+              <div class="bar-name">${monthMap[label] || label}</div>
+            </div>
+          `).join('');
+        })()}
       </div>
     </div>
 
@@ -269,6 +345,8 @@ function DashboardScreen() {
     } catch (e) {
       console.error('PDF generation failed:', e);
       Alert.alert("Error", "Failed to generate PDF report.");
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -302,11 +380,18 @@ function DashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.reportButton, { backgroundColor: colors.primaryContainer }]}
+            style={[styles.reportButton, { backgroundColor: colors.primaryContainer, opacity: isGeneratingPdf ? 0.6 : 1 }]}
             onPress={handleDownloadReport}
+            disabled={isGeneratingPdf}
           >
-            <MaterialIcons name="download" size={18} color={colors.onPrimary} />
-            <Text style={[styles.reportButtonText, { color: colors.onPrimary }]}>Report</Text>
+            {isGeneratingPdf ? (
+              <ActivityIndicator size="small" color={colors.onPrimary} />
+            ) : (
+              <>
+                <MaterialIcons name="download" size={18} color={colors.onPrimary} />
+                <Text style={[styles.reportButtonText, { color: colors.onPrimary }]}>Report</Text>
+              </>
+            )}
           </TouchableOpacity>
         </Animated.View>
 

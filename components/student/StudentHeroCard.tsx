@@ -10,6 +10,7 @@ interface StudentHeroCardProps {
   studentId: string;
   studentPhone: string;
   avatarUrl?: string;
+  joiningDate?: string;
 }
 
 export function StudentHeroCard({
@@ -19,6 +20,7 @@ export function StudentHeroCard({
   studentId,
   studentPhone,
   avatarUrl,
+  joiningDate,
 }: StudentHeroCardProps) {
   return (
     <View style={styles.profileCard}>
@@ -41,8 +43,25 @@ export function StudentHeroCard({
           <View style={styles.profileInfo}>
             <Text style={styles.studentName}>{studentName}</Text>
 
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{studentStatus.toUpperCase()}</Text>
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: studentStatus.toLowerCase() === 'enrolled' ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255, 255, 255, 0.2)',
+                borderColor: studentStatus.toLowerCase() === 'enrolled' ? 'rgba(52, 211, 153, 0.5)' : 'rgba(255, 255, 255, 0.3)',
+                borderWidth: 1
+              }
+            ]}>
+              <MaterialIcons 
+                name={studentStatus.toLowerCase() === 'enrolled' ? 'verified' : 'info'} 
+                size={12} 
+                color={studentStatus.toLowerCase() === 'enrolled' ? '#6ee7b7' : '#ffffff'} 
+              />
+              <Text style={[
+                styles.statusText, 
+                { color: studentStatus.toLowerCase() === 'enrolled' ? '#6ee7b7' : '#ffffff' }
+              ]}>
+                {studentStatus.toUpperCase()}
+              </Text>
             </View>
 
             <View style={styles.detailsGrid}>
@@ -64,6 +83,14 @@ export function StudentHeroCard({
                 </View>
                 <Text style={styles.detailText}>{studentPhone}</Text>
               </View>
+              {joiningDate && (
+                <View style={styles.detailItem}>
+                  <View style={[styles.smallIconBg, { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
+                    <MaterialIcons name="event" size={14} color="#a78bfa" />
+                  </View>
+                  <Text style={styles.detailText}>Joined: {new Date(joiningDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -112,17 +139,19 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   statusBadge: {
-    backgroundColor: '#fcd34d',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     alignSelf: 'flex-start',
     marginBottom: 16,
   },
   statusText: {
-    color: '#78350f',
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   detailsGrid: {
     gap: 10,

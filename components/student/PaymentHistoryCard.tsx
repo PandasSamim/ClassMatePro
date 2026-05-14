@@ -11,19 +11,26 @@ interface PaymentHistoryCardProps {
 }
 
 export function PaymentHistoryCard({ colors, fees, onPayPress, onViewAll }: PaymentHistoryCardProps) {
-  const totalOutstanding = fees.reduce((sum, f) => sum + (f.status !== 'waived' ? f.due_amount : 0), 0);
+  const getEffectiveStatus = (fee: any) => {
+    if (fee.status === 'paid' || fee.status === 'waived') return fee.status;
+    if ((fee.attendance_rate || 0) < 0.1 && (fee.paid_amount || 0) === 0) return 'waived';
+    return fee.status;
+  };
+
+  const displayedFees = fees.slice(0, 3);
+
+  const totalOutstanding = fees.reduce((sum, f) => {
+    return sum + (getEffectiveStatus(f) !== 'waived' ? f.due_amount : 0);
+  }, 0);
 
   return (
     <View style={[styles.card, styles.paymentCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant, borderTopColor: colors.primary }]}>
       <View style={[styles.paymentHeader, { borderBottomColor: colors.surfaceVariant }]}>
-        <View>
+        <View style={{ flex: 1 }}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="account-balance-wallet" size={24} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Payment History</Text>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Payment History (Last 3 Months)</Text>
           </View>
-          <Text style={[styles.cardSubtitle, { color: colors.outline, marginTop: 4 }]}>
-            {new Date().getFullYear()}-{new Date().getFullYear() + 1} ACADEMIC YEAR
-          </Text>
         </View>
         <TouchableOpacity 
           style={[styles.viewAllButton, { backgroundColor: `${colors.primary}10`, borderColor: colors.primary }]}
@@ -33,103 +40,62 @@ export function PaymentHistoryCard({ colors, fees, onPayPress, onViewAll }: Paym
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.infoBanner, { backgroundColor: colors.surface, borderBottomColor: colors.surfaceVariant }]}>
-        <MaterialIcons name="info" size={16} color={colors.primary} />
-        <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
-          <Text style={{ fontWeight: '700' }}>Fee Rule:</Text> Fees are waived if monthly attendance is less than 10%.
-        </Text>
-      </View>
 
-      {/* Total Due Summary */}
-      <View style={[styles.totalDueContainer, { backgroundColor: colors.errorContainer, borderColor: colors.error }]}>
-        <View>
-          <Text style={[styles.totalDueLabel, { color: colors.onErrorContainer }]}>TOTAL OUTSTANDING BALANCE</Text>
-          <Text style={[styles.totalDueValue, { color: colors.onErrorContainer }]}>
-            ₹{totalOutstanding.toFixed(0)}
-          </Text>
-        </View>
-        <MaterialIcons name="account-balance" size={32} color={colors.onErrorContainer} opacity={0.3} />
-      </View>
 
-      {/* Table */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: '100%' }}>
-        <View style={styles.table}>
-          <View style={[styles.tableHeader, { backgroundColor: colors.surface, borderBottomColor: colors.surfaceVariant }]}>
-            <Text style={[styles.th, { color: colors.outline, width: 100 }]}>MONTH</Text>
-            <Text style={[styles.th, { color: colors.outline, width: 60 }]}>ATT %</Text>
-            <Text style={[styles.th, { color: colors.outline, width: 100 }]}>STATUS</Text>
-            <Text style={[styles.th, { color: colors.outline, width: 70 }]}>DUE</Text>
-            <Text style={[styles.th, { color: colors.outline, width: 80 }]}>ACTION</Text>
-          </View>
-
-          {fees.length > 0 ? fees.map((fee) => {
-            let displayMonth = fee.month.replace('Invalid Date ', '');
-            try {
-              if (displayMonth.includes('-')) {
-                const [year, month] = displayMonth.split('-');
-                const monthDate = new Date(parseInt(year), parseInt(month) - 1);
-                if (!isNaN(monthDate.getTime())) {
-                  const monthName = monthDate.toLocaleString('default', { month: 'long' });
-                  displayMonth = `${monthName} ${year}`;
-                }
+      {/* Simple List */}
+      <View style={styles.listContainer}>
+        {displayedFees.length > 0 ? displayedFees.map((fee) => {
+          let displayMonth = fee.month.replace('Invalid Date ', '');
+          try {
+            if (displayMonth.includes('-')) {
+              const [year, month] = displayMonth.split('-');
+              const monthDate = new Date(parseInt(year), parseInt(month) - 1);
+              if (!isNaN(monthDate.getTime())) {
+                const monthName = monthDate.toLocaleString('default', { month: 'long' });
+                displayMonth = `${monthName} ${year}`;
               }
-            } catch (e) {
-              console.warn("Format error:", e);
             }
+          } catch (e) {
+            console.warn("Format error:", e);
+          }
 
-            return (
-              <View key={fee.id} style={[styles.tableRow, { borderBottomColor: colors.surfaceVariant }]}>
-                <Text style={[styles.td, { color: colors.onSurface, width: 100, fontSize: 13 }]}>{displayMonth}</Text>
+          const monthNameOnly = displayMonth.split(' ')[0] || displayMonth;
 
-                <Text style={[styles.td, { color: colors.onSurfaceVariant, width: 60, fontSize: 12 }]}>
-                  {Math.round((fee.attendance_rate || 0) * 100)}%
+          return (
+            <View key={fee.id} style={[styles.simpleRow, { borderBottomColor: colors.surfaceVariant }]}>
+              <View style={styles.simpleRowContent}>
+                <Text style={[styles.simpleText, { color: colors.onSurface }]}>
+                  {monthNameOnly} — Attendance: {Math.round((fee.attendance_rate || 0) * 100)}% — 
                 </Text>
-
-                {/* Status Column */}
-                <View style={{ width: 100 }}>
-                  <View style={[styles.statusBadgeSmall, { alignSelf: 'flex-start', backgroundColor: fee.status === 'paid' ? colors.secondaryContainer : fee.status === 'waived' ? colors.surfaceVariant : fee.status === 'partial' ? colors.primaryContainer : colors.errorContainer }]}>
-                    <MaterialIcons 
-                      name={fee.status === 'paid' ? 'check-circle' : fee.status === 'waived' ? 'money-off' : fee.status === 'partial' ? 'adjust' : 'schedule'} 
-                      size={12} 
-                      color={fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : fee.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer} 
-                    />
-                    <Text style={[styles.statusBadgeText, { color: fee.status === 'paid' ? colors.onSecondaryContainer : fee.status === 'waived' ? colors.onSurfaceVariant : fee.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer, textTransform: 'capitalize' }]}>
-                      {fee.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.td, { color: fee.due_amount > 0 ? colors.error : colors.outline, width: 70, fontWeight: '700' }]}>
-                  ₹{fee.due_amount.toFixed(0)}
-                </Text>
-
-                {/* Action Column */}
-                <View style={{ width: 80, alignItems: 'center', justifyContent: 'center' }}>
-                  {(fee.status === 'due' || fee.status === 'partial') ? (
-                    <TouchableOpacity
-                      style={[styles.payButton, { backgroundColor: colors.primary }]}
-                      onPress={() => onPayPress(fee)}
-                    >
-                      <Text style={[styles.payButtonText, { color: colors.onPrimary }]}>Pay</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <MaterialIcons 
-                      name={fee.status === 'paid' ? "check-circle" : "info"} 
-                      size={20} 
-                      color={fee.status === 'paid' ? colors.secondary : colors.outline} 
-                    />
-                  )}
+                <View style={[
+                  styles.statusBadgeSmall, 
+                  { backgroundColor: getEffectiveStatus(fee) === 'paid' ? colors.secondaryContainer : getEffectiveStatus(fee) === 'waived' ? colors.errorContainer : '#ffedd5', marginLeft: 6 }
+                ]}>
+                  <Text style={[
+                    styles.statusBadgeText, 
+                    { color: getEffectiveStatus(fee) === 'paid' ? colors.onSecondaryContainer : getEffectiveStatus(fee) === 'waived' ? colors.error : '#c2410c' }
+                  ]}>
+                    {getEffectiveStatus(fee) === 'paid' ? 'PAID' : getEffectiveStatus(fee) === 'waived' ? 'NO_FEES' : 'DUE'}
+                  </Text>
                 </View>
               </View>
-            );
-          }) : (
-            <View style={{ padding: 24 }}>
-              <Text style={{ color: colors.onSurfaceVariant }}>No payment records found.</Text>
-            </View>
-          )}
 
-        </View>
-      </ScrollView>
+              {getEffectiveStatus(fee) !== 'waived' && getEffectiveStatus(fee) !== 'paid' && (
+                <TouchableOpacity
+                  style={[styles.payButton, { backgroundColor: colors.primary }]}
+                  onPress={() => onPayPress(fee)}
+                >
+                  <Text style={[styles.payButtonText, { color: colors.onPrimary }]}>Pay</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        }) : (
+          <View style={{ padding: 24, alignItems: 'center' }}>
+            <Text style={{ color: colors.onSurfaceVariant }}>No payment records found.</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -180,57 +146,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  infoText: {
-    fontSize: 12,
-    flex: 1,
-  },
-  totalDueContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    margin: 24,
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  totalDueLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  totalDueValue: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  table: {
+
+  listContainer: {
     paddingHorizontal: 24,
     paddingBottom: 24,
   },
-  tableHeader: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  th: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tableRow: {
+  simpleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  td: {
+  simpleRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  simpleText: {
     fontSize: 14,
+    fontWeight: '500',
   },
   statusBadgeSmall: {
     flexDirection: 'row',

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export type BadgeVariant = 'success' | 'error' | 'neutral' | 'primary';
 
@@ -10,9 +11,10 @@ interface BadgeProps {
   variant?: BadgeVariant;
   style?: ViewStyle;
   outlined?: boolean;
+  badgeIcon?: keyof typeof MaterialIcons.glyphMap;
 }
 
-export function Badge({ label, variant = 'neutral', style, outlined }: BadgeProps) {
+export function Badge({ label, variant = 'neutral', style, outlined, badgeIcon }: BadgeProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -22,29 +24,34 @@ export function Badge({ label, variant = 'neutral', style, outlined }: BadgeProp
 
   switch (variant) {
     case 'success':
-      bgColor = colors.secondaryContainer;
-      textColor = colors.onSecondaryContainer;
+      bgColor = 'rgba(16, 185, 129, 0.1)';
+      textColor = '#059669';
+      borderColor = 'rgba(16, 185, 129, 0.3)';
       break;
     case 'error':
-      bgColor = colors.errorContainer;
-      textColor = colors.onErrorContainer;
-      if (outlined) {
-         borderColor = 'rgba(186, 26, 26, 0.2)'; // semi-transparent error
-      }
+      bgColor = 'rgba(239, 68, 68, 0.1)';
+      textColor = '#dc2626';
+      borderColor = 'rgba(239, 68, 68, 0.3)';
       break;
     case 'primary':
-      bgColor = colors.primaryContainer;
-      textColor = colors.onPrimaryContainer;
+      bgColor = 'rgba(59, 130, 246, 0.1)';
+      textColor = '#2563eb';
+      borderColor = 'rgba(59, 130, 246, 0.3)';
       break;
   }
+
+  const borderStyle = (outlined || variant === 'success' || variant === 'error' || variant === 'primary') 
+    ? { borderWidth: 1, borderColor } 
+    : {};
 
   return (
     <View style={[
       styles.badge, 
       { backgroundColor: bgColor },
-      outlined && { borderWidth: 1, borderColor },
+      borderStyle,
       style
     ]}>
+      {badgeIcon && <MaterialIcons name={badgeIcon} size={10} color={textColor} style={{ marginRight: 4 }} />}
       <Text style={[styles.text, { color: textColor }]}>{label}</Text>
     </View>
   );
@@ -52,19 +59,17 @@ export function Badge({ label, variant = 'neutral', style, outlined }: BadgeProp
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    minWidth: 64,
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    minWidth: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   text: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
 });

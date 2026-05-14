@@ -101,10 +101,10 @@ export default function PaymentHistoryScreen() {
             Attendance: {Math.round((item.attendance_rate || 0) * 100)}%
           </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: item.status === 'paid' ? colors.secondaryContainer : item.status === 'waived' ? colors.surfaceVariant : item.status === 'partial' ? colors.primaryContainer : colors.errorContainer }]}>
-          <MaterialIcons name={item.status === 'paid' ? 'check-circle' : item.status === 'waived' ? 'money-off' : item.status === 'partial' ? 'adjust' : 'schedule'} size={14} color={item.status === 'paid' ? colors.onSecondaryContainer : item.status === 'waived' ? colors.onSurfaceVariant : item.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer} />
-          <Text style={[styles.statusBadgeText, { color: item.status === 'paid' ? colors.onSecondaryContainer : item.status === 'waived' ? colors.onSurfaceVariant : item.status === 'partial' ? colors.onPrimaryContainer : colors.onErrorContainer }]}>
-            {item.status.toUpperCase()}
+        <View style={[styles.statusBadge, { backgroundColor: item.status === 'paid' ? colors.secondaryContainer : item.status === 'waived' ? colors.errorContainer : '#ffedd5' }]}>
+          <MaterialIcons name={item.status === 'paid' ? 'check-circle' : item.status === 'waived' ? 'money-off' : 'schedule'} size={14} color={item.status === 'paid' ? colors.onSecondaryContainer : item.status === 'waived' ? colors.error : '#c2410c'} />
+          <Text style={[styles.statusBadgeText, { color: item.status === 'paid' ? colors.onSecondaryContainer : item.status === 'waived' ? colors.error : '#c2410c' }]}>
+            {item.status === 'paid' ? 'PAID' : item.status === 'waived' ? 'NO_FEES' : 'DUE'}
           </Text>
         </View>
       </View>

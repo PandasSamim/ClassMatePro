@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { BarChart } from 'react-native-gifted-charts';
+import { BarChart } from 'react-native-chart-kit';
 import { ThemeColors } from '@/constants/theme';
 
 interface AcademicOverviewCardProps {
@@ -10,6 +10,29 @@ interface AcademicOverviewCardProps {
 }
 
 export function AcademicOverviewCard({ colors, chartData }: AcademicOverviewCardProps) {
+  const chartConfig = {
+    backgroundColor: 'transparent',
+    backgroundGradientFrom: colors.surfaceContainerLowest,
+    backgroundGradientTo: colors.surfaceContainerLowest,
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientToOpacity: 0,
+    decimalPlaces: 0,
+    color: (opacity = 1) => colors.primary,
+    labelColor: (opacity = 1) => colors.onSurfaceVariant,
+    barPercentage: 0.7,
+    useShadowColorFromDataset: false,
+  };
+
+  const data = {
+    labels: chartData.map(d => d.label),
+    datasets: [
+      {
+        data: chartData.map(d => d.value),
+        colors: chartData.map(d => (opacity = 1) => d.frontColor || colors.primary)
+      }
+    ]
+  };
+
   return (
     <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant, borderTopColor: colors.primary }]}>
       <View style={styles.cardHeader}>
@@ -18,26 +41,28 @@ export function AcademicOverviewCard({ colors, chartData }: AcademicOverviewCard
       </View>
 
       <View style={styles.chartContainer}>
-        <BarChart
-          data={chartData}
-          barWidth={45}
-          noOfSections={4}
-          maxValue={100}
-          barBorderRadius={8}
-          frontColor={colors.primary}
-          yAxisThickness={0}
-          xAxisThickness={0}
-          hideRules
-          yAxisTextStyle={{ color: colors.outline, fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: colors.onSurfaceVariant, fontSize: 10, width: 80, marginLeft: -15 }}
-          isAnimated
-          animationDuration={1000}
-          backgroundColor="transparent"
-          width={240}
-          height={120}
-          spacing={25}
-          initialSpacing={10}
-        />
+        {chartData.length > 0 ? (
+          <BarChart
+            data={data}
+            width={Dimensions.get('window').width - 72}
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix="%"
+            chartConfig={chartConfig}
+            style={{
+              marginVertical: 8,
+              borderRadius: 16,
+              marginLeft: -10,
+            }}
+            withCustomBarColorFromData={true}
+            flatColor={true}
+            fromZero={true}
+            showValuesOnTopOfBars={true}
+            withInnerLines={false}
+          />
+        ) : (
+          <Text style={{ color: colors.onSurfaceVariant, padding: 20 }}>No academic data available</Text>
+        )}
       </View>
 
       <View style={styles.legendRow}>
@@ -66,7 +91,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   cardTitle: {
     fontSize: 16,
@@ -74,7 +99,8 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     alignItems: 'center',
-    marginLeft: -20,
+    justifyContent: 'center',
+    minHeight: 220,
   },
   legendRow: {
     flexDirection: 'row',
