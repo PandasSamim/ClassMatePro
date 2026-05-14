@@ -26,16 +26,16 @@ export default function StudentsScreen() {
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
 
-  const StudentSkeleton = () => (
-    <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-      <View style={[styles.skeletonAvatar, { backgroundColor: colors.surfaceVariant }]} />
-      <View style={{ flex: 1, gap: 8 }}>
-        <View style={[styles.skeletonLine, { width: '60%', height: 14, backgroundColor: colors.surfaceVariant }]} />
-        <View style={[styles.skeletonLine, { width: '40%', height: 10, backgroundColor: colors.surfaceVariant }]} />
-      </View>
-      <View style={[styles.skeletonBadge, { backgroundColor: colors.surfaceVariant }]} />
+const StudentSkeleton = ({ colors }: { colors: any }) => (
+  <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
+    <View style={[styles.skeletonAvatar, { backgroundColor: colors.surfaceVariant }]} />
+    <View style={{ flex: 1, gap: 8 }}>
+      <View style={[styles.skeletonLine, { width: '60%', height: 14, backgroundColor: colors.surfaceVariant }]} />
+      <View style={[styles.skeletonLine, { width: '40%', height: 10, backgroundColor: colors.surfaceVariant }]} />
     </View>
-  );
+    <View style={[styles.skeletonBadge, { backgroundColor: colors.surfaceVariant }]} />
+  </View>
+);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,83 +111,6 @@ export default function StudentsScreen() {
   };
 
 
-  const Header = () => (
-    <>
-      {/* Page Header */}
-      <View style={styles.pageHeader}>
-        <View>
-          <Text style={[styles.pageTitle, { color: colors.onBackground }]}>Student Directory</Text>
-          <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Manage classes, academic records, and student profiles.</Text>
-        </View>
-        <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.push('/add-student')}
-        >
-          <MaterialIcons name="person-add" size={18} color={colors.onPrimary} />
-          <Text style={[styles.addButtonText, { color: colors.onPrimary }]}>Add Student</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Classes List */}
-      <View style={[styles.sectionContainer, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.surfaceVariant }]}>
-          <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Classes</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity 
-              style={[styles.iconButton, { backgroundColor: !selectedClassId ? colors.primaryContainer : 'transparent', borderRadius: 8 }]}
-              onPress={() => setSelectedClassId(undefined)}
-            >
-              <MaterialIcons name="all-inclusive" size={20} color={!selectedClassId ? colors.onPrimaryContainer : colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.iconButton, { backgroundColor: colors.primaryContainer, borderRadius: 8 }]}
-              onPress={() => setAddClassVisible(true)}
-            >
-              <MaterialIcons name="add" size={20} color={colors.onPrimaryContainer} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.classesList}>
-          {classes.length > 0 ? classes.map((c) => (
-            <ClassItem 
-              key={c.id} 
-              name={c.name} 
-              count={`${c.student_count || 0} Students`} 
-              isActive={selectedClassId === c.id} 
-              onPress={() => setSelectedClassId(c.id)}
-              onDelete={() => handleDeleteClass(c.id, c.name)}
-            />
-          )) : (
-            <Text style={{ padding: 12, color: colors.onSurfaceVariant }}>No classes found.</Text>
-          )}
-        </View>
-      </View>
-
-      {/* Student List Section Header */}
-      <View style={[styles.rosterCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
-        <View style={styles.rosterHeader}>
-          <View>
-            <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Student Roster</Text>
-            <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>
-              {selectedClassId ? classes.find(c => c.id === selectedClassId)?.name : 'All Students'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.searchContainer, { backgroundColor: colors.surfaceContainerLow }]}>
-          <MaterialIcons name="search" size={20} color={colors.outline} style={styles.searchIcon} />
-          <TextInput 
-            style={[styles.searchInput, { color: colors.onSurface }]}
-            placeholder="Search students..."
-            placeholderTextColor={colors.outline}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      </View>
-    </>
-  );
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -197,7 +120,83 @@ export default function StudentsScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<Header />}
+        ListHeaderComponent={
+          <>
+            {/* Page Header */}
+            <View style={styles.pageHeader}>
+              <View>
+                <Text style={[styles.pageTitle, { color: colors.onBackground }]}>Student Directory</Text>
+                <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Manage classes, academic records, and student profiles.</Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/add-student')}
+              >
+                <MaterialIcons name="person-add" size={18} color={colors.onPrimary} />
+                <Text style={[styles.addButtonText, { color: colors.onPrimary }]}>Add Student</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Classes List */}
+            <View style={[styles.sectionContainer, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+              <View style={[styles.sectionHeader, { borderBottomColor: colors.surfaceVariant }]}>
+                <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Classes</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity 
+                    style={[styles.iconButton, { backgroundColor: !selectedClassId ? colors.primaryContainer : 'transparent', borderRadius: 8 }]}
+                    onPress={() => setSelectedClassId(undefined)}
+                  >
+                    <MaterialIcons name="all-inclusive" size={20} color={!selectedClassId ? colors.onPrimaryContainer : colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.iconButton, { backgroundColor: colors.primaryContainer, borderRadius: 8 }]}
+                    onPress={() => setAddClassVisible(true)}
+                  >
+                    <MaterialIcons name="add" size={20} color={colors.onPrimaryContainer} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.classesList}>
+                {classes.length > 0 ? classes.map((c) => (
+                  <ClassItem 
+                    key={c.id} 
+                    name={c.name} 
+                    count={`${c.student_count || 0} Students`} 
+                    isActive={selectedClassId === c.id} 
+                    onPress={() => setSelectedClassId(c.id)}
+                    onDelete={() => handleDeleteClass(c.id, c.name)}
+                  />
+                )) : (
+                  <Text style={{ padding: 12, color: colors.onSurfaceVariant }}>No classes found.</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Student List Section Header */}
+            <View style={[styles.rosterCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+              <View style={styles.rosterHeader}>
+                <View>
+                  <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Student Roster</Text>
+                  <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>
+                    {selectedClassId ? classes.find(c => c.id === selectedClassId)?.name : 'All Students'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.searchContainer, { backgroundColor: colors.surfaceContainerLow }]}>
+                <MaterialIcons name="search" size={20} color={colors.outline} style={styles.searchIcon} />
+                <TextInput 
+                  style={[styles.searchInput, { color: colors.onSurface }]}
+                  placeholder="Search students..."
+                  placeholderTextColor={colors.outline}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            </View>
+          </>
+        }
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item: s, index }) => {
           const isOdd = index % 2 !== 0;
@@ -232,7 +231,7 @@ export default function StudentsScreen() {
         ListEmptyComponent={
           loading ? (
             <View style={{ gap: 12, marginTop: 12, paddingHorizontal: 16 }}>
-              {[1, 2, 3, 4, 5, 6].map(i => <StudentSkeleton key={i} />)}
+              {[1, 2, 3, 4, 5, 6].map(i => <StudentSkeleton key={i} colors={colors} />)}
             </View>
           ) : (
             <View style={{ padding: 48, alignItems: 'center', gap: 16, backgroundColor: colors.surfaceContainerLowest, borderBottomWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.outlineVariant, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>

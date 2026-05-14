@@ -40,19 +40,19 @@ export default function AttendanceScreen() {
   const [currentMonthKey, setCurrentMonthKey] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const isLoading = studentsLoading || attendanceLoading;
 
-  const AttendanceSkeleton = () => (
-    <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-      <View style={{ flex: 1, gap: 8 }}>
-        <View style={[styles.skeletonLine, { width: '50%', height: 16, backgroundColor: colors.surfaceVariant }]} />
-        <View style={[styles.skeletonLine, { width: '30%', height: 10, backgroundColor: colors.surfaceVariant }]} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {[1, 2, 3].map(i => (
-          <View key={i} style={[styles.skeletonCircle, { backgroundColor: colors.surfaceVariant }]} />
-        ))}
-      </View>
+const AttendanceSkeleton = ({ colors }: { colors: any }) => (
+  <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
+    <View style={{ flex: 1, gap: 8 }}>
+      <View style={[styles.skeletonLine, { width: '50%', height: 16, backgroundColor: colors.surfaceVariant }]} />
+      <View style={[styles.skeletonLine, { width: '30%', height: 10, backgroundColor: colors.surfaceVariant }]} />
     </View>
-  );
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={[styles.skeletonCircle, { backgroundColor: colors.surfaceVariant }]} />
+      ))}
+    </View>
+  </View>
+);
 
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [totalExpected, setTotalExpected] = useState('0');
@@ -177,214 +177,6 @@ export default function AttendanceScreen() {
   const currentMonthStr = todayStr.slice(0, 7);
   const isAtFutureEnd = viewMode === 'daily' ? selectedDate >= todayStr : currentMonthKey >= currentMonthStr;
 
-  const Header = () => (
-    <>
-      {/* Class Selector */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classSelector}>
-        <TouchableOpacity
-          style={[
-            styles.classItem,
-            { backgroundColor: selectedClassId === null ? colors.primaryContainer : colors.surfaceContainer },
-            selectedClassId === null && { borderColor: colors.primary, borderWidth: 1 }
-          ]}
-          onPress={() => setSelectedClassId(null)}
-        >
-          <Text style={[
-            styles.classItemText,
-            { color: selectedClassId === null ? colors.onPrimaryContainer : colors.onSurfaceVariant }
-          ]}>
-            All Classes
-          </Text>
-        </TouchableOpacity>
-
-        {classes.map((cls) => (
-          <TouchableOpacity
-            key={cls.id.toString()}
-            style={[
-              styles.classItem,
-              { backgroundColor: selectedClassId === cls.id ? colors.primaryContainer : colors.surfaceContainer },
-              selectedClassId === cls.id && { borderColor: colors.primary, borderWidth: 1 }
-            ]}
-            onPress={() => setSelectedClassId(cls.id)}
-          >
-            <Text style={[
-              styles.classItemText,
-              { color: selectedClassId === cls.id ? colors.onPrimaryContainer : colors.onSurfaceVariant }
-            ]}>
-              {cls.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* View Mode Toggle */}
-      <View style={[styles.viewToggle, { backgroundColor: colors.surfaceContainer }]}>
-        <TouchableOpacity 
-          style={[styles.toggleBtn, viewMode === 'daily' && { backgroundColor: colors.surface }]} 
-          onPress={() => setViewMode('daily')}
-        >
-          <Text style={[styles.toggleText, { color: viewMode === 'daily' ? colors.primary : colors.onSurfaceVariant }]}>Daily</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.toggleBtn, viewMode === 'monthly' && { backgroundColor: colors.surface }]} 
-          onPress={() => setViewMode('monthly')}
-        >
-          <Text style={[styles.toggleText, { color: viewMode === 'monthly' ? colors.primary : colors.onSurfaceVariant }]}>Monthly Summary</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Header & Date Controls */}
-      <View style={styles.headerContainer}>
-        <View style={styles.headerTitles}>
-          <Text style={[styles.pageTitle, { color: colors.onSurface }]}>
-            {viewMode === 'daily' ? 'Daily Attendance' : 'Monthly Summary'}
-          </Text>
-          <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>{selectedClassId ? (currentClass?.name || 'Class') : 'All Classes'}</Text>
-        </View>
-        
-        <View style={[styles.dateControls, { backgroundColor: colors.surfaceContainer }]}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => viewMode === 'daily' ? navigateDate(-1) : navigateMonth(-1)}>
-            <MaterialIcons name="chevron-left" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.dateDisplay, { backgroundColor: colors.surface }]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <MaterialIcons name="calendar-today" size={16} color={colors.primary} />
-            <Text style={[styles.dateText, { color: colors.onSurface }]}>
-              {viewMode === 'daily' 
-                ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : new Date(currentMonthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-              }
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.iconButton, isAtFutureEnd && { opacity: 0.2 }]} 
-            onPress={() => viewMode === 'daily' ? navigateDate(1) : navigateMonth(1)}
-            disabled={isAtFutureEnd}
-          >
-            <MaterialIcons name="chevron-right" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
-        </View>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={viewMode === 'daily' ? new Date(selectedDate) : new Date(currentMonthKey + '-01')}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={onDateChange}
-          />
-        )}
-      </View>
-      {/* Summary Cards */}
-      {viewMode === 'daily' && (
-        <View style={styles.summaryGrid}>
-          <SummaryCard 
-            label="STUDENTS" 
-            value={students.length} 
-            topBorderColor={colors.primary} 
-            valueColor={colors.primary}
-          />
-          <SummaryCard 
-            label="PRESENT" 
-            value={presentCount} 
-            topBorderColor={colors.secondary} 
-            valueColor={colors.secondary}
-          />
-          <SummaryCard 
-            label="ABSENT" 
-            value={absentCount} 
-            topBorderColor={colors.error} 
-            valueColor={colors.error}
-          />
-          <SummaryCard 
-            label="DAY OFF" 
-            value={dayOffCount} 
-            topBorderColor={colors.outline} 
-          />
-        </View>
-      )}
-
-      {/* Daily View: Quick Actions & List Header */}
-      {viewMode === 'daily' && (
-        <>
-          <View style={[styles.quickActionsCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-            <Text style={[styles.quickActionsTitle, { color: colors.outline }]}>QUICK ATTENDANCE ACTIONS</Text>
-            <View style={styles.bulkActionsRow}>
-              <TouchableOpacity 
-                style={[styles.bulkButton, { backgroundColor: colors.secondaryContainer }]}
-                onPress={() => handleBulkStatusChange('present')}
-              >
-                <MaterialIcons name="check-circle" size={20} color={colors.onSecondaryContainer} />
-                <Text style={[styles.bulkButtonText, { color: colors.onSecondaryContainer }]}>All Present</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.bulkButton, { backgroundColor: colors.errorContainer }]}
-                onPress={() => handleBulkStatusChange('absent')}
-              >
-                <MaterialIcons name="cancel" size={20} color={colors.onErrorContainer} />
-                <Text style={[styles.bulkButtonText, { color: colors.onErrorContainer }]}>All Absent</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.bulkButton, { backgroundColor: colors.surfaceVariant }]}
-                onPress={() => handleBulkStatusChange('dayOff')}
-              >
-                <MaterialIcons name="event-busy" size={20} color={colors.onSurfaceVariant} />
-                <Text style={[styles.bulkButtonText, { color: colors.onSurfaceVariant }]}>Day Off</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.listHeader}>
-            <Text style={[styles.listTitle, { color: colors.onSurface }]}>Student List</Text>
-          </View>
-        </>
-      )}
-
-      {/* Monthly Summary Configuration & Header (Part of the unified table) */}
-      {viewMode === 'monthly' && (
-        <View style={[
-          styles.monthlyCard, 
-          { 
-            backgroundColor: colors.surfaceContainerLowest, 
-            borderColor: colors.surfaceVariant,
-            marginBottom: 0,
-            paddingBottom: 0, // Remove internal bottom padding
-            borderBottomWidth: 0,
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
-          }
-        ]}>
-          <View style={styles.monthlyInputRow}>
-            <Text style={[styles.inputLabel, { color: colors.outline }]}>TOTAL SESSIONS THIS MONTH</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: colors.surface }]}>
-              <MaterialIcons name="event-available" size={20} color={colors.primary} />
-              <TextInput
-                style={[styles.textInput, { color: colors.onSurface, flex: 1, marginLeft: 8, textAlign: 'center' }]}
-                value={totalExpected}
-                onChangeText={handleUpdateExpected}
-                keyboardType="numeric"
-                placeholder="Enter total sessions"
-              />
-              <MaterialIcons name="lock" size={18} color={colors.error} style={{ marginLeft: 8 }} />
-            </View>
-          </View>
-
-          <View style={styles.table}>
-            <View style={[styles.tableHeader, { borderBottomColor: colors.surfaceVariant }]}>
-              <Text style={[styles.th, { color: colors.outline, flex: 2 }]}>STUDENT</Text>
-              <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>PRES</Text>
-              <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>TOT</Text>
-              <Text style={[styles.th, { color: colors.outline, flex: 1.2, textAlign: 'right' }]}>RATE</Text>
-            </View>
-          </View>
-        </View>
-      )}
-    </>
-  );
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -394,7 +186,214 @@ export default function AttendanceScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<Header />}
+        ListHeaderComponent={
+          <>
+            {/* Class Selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.classItem,
+                  { backgroundColor: selectedClassId === null ? colors.primaryContainer : colors.surfaceContainer },
+                  selectedClassId === null && { borderColor: colors.primary, borderWidth: 1 }
+                ]}
+                onPress={() => setSelectedClassId(null)}
+              >
+                <Text style={[
+                  styles.classItemText,
+                  { color: selectedClassId === null ? colors.onPrimaryContainer : colors.onSurfaceVariant }
+                ]}>
+                  All Classes
+                </Text>
+              </TouchableOpacity>
+
+              {classes.map((cls) => (
+                <TouchableOpacity
+                  key={cls.id.toString()}
+                  style={[
+                    styles.classItem,
+                    { backgroundColor: selectedClassId === cls.id ? colors.primaryContainer : colors.surfaceContainer },
+                    selectedClassId === cls.id && { borderColor: colors.primary, borderWidth: 1 }
+                  ]}
+                  onPress={() => setSelectedClassId(cls.id)}
+                >
+                  <Text style={[
+                    styles.classItemText,
+                    { color: selectedClassId === cls.id ? colors.onPrimaryContainer : colors.onSurfaceVariant }
+                  ]}>
+                    {cls.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* View Mode Toggle */}
+            <View style={[styles.viewToggle, { backgroundColor: colors.surfaceContainer }]}>
+              <TouchableOpacity 
+                style={[styles.toggleBtn, viewMode === 'daily' && { backgroundColor: colors.surface }]} 
+                onPress={() => setViewMode('daily')}
+              >
+                <Text style={[styles.toggleText, { color: viewMode === 'daily' ? colors.primary : colors.onSurfaceVariant }]}>Daily</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.toggleBtn, viewMode === 'monthly' && { backgroundColor: colors.surface }]} 
+                onPress={() => setViewMode('monthly')}
+              >
+                <Text style={[styles.toggleText, { color: viewMode === 'monthly' ? colors.primary : colors.onSurfaceVariant }]}>Monthly Summary</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Header & Date Controls */}
+            <View style={styles.headerContainer}>
+              <View style={styles.headerTitles}>
+                <Text style={[styles.pageTitle, { color: colors.onSurface }]}>
+                  {viewMode === 'daily' ? 'Daily Attendance' : 'Monthly Summary'}
+                </Text>
+                <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>{selectedClassId ? (currentClass?.name || 'Class') : 'All Classes'}</Text>
+              </View>
+              
+              <View style={[styles.dateControls, { backgroundColor: colors.surfaceContainer }]}>
+                <TouchableOpacity style={styles.iconButton} onPress={() => viewMode === 'daily' ? navigateDate(-1) : navigateMonth(-1)}>
+                  <MaterialIcons name="chevron-left" size={24} color={colors.onSurfaceVariant} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.dateDisplay, { backgroundColor: colors.surface }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <MaterialIcons name="calendar-today" size={16} color={colors.primary} />
+                  <Text style={[styles.dateText, { color: colors.onSurface }]}>
+                    {viewMode === 'daily' 
+                      ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : new Date(currentMonthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                    }
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.iconButton, isAtFutureEnd && { opacity: 0.2 }]} 
+                  onPress={() => viewMode === 'daily' ? navigateDate(1) : navigateMonth(1)}
+                  disabled={isAtFutureEnd}
+                >
+                  <MaterialIcons name="chevron-right" size={24} color={colors.onSurfaceVariant} />
+                </TouchableOpacity>
+              </View>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={viewMode === 'daily' ? new Date(selectedDate) : new Date(currentMonthKey + '-01')}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  maximumDate={new Date()}
+                  onChange={onDateChange}
+                />
+              )}
+            </View>
+            {/* Summary Cards */}
+            {viewMode === 'daily' && (
+              <View style={styles.summaryGrid}>
+                <SummaryCard 
+                  label="STUDENTS" 
+                  value={students.length} 
+                  topBorderColor={colors.primary} 
+                  valueColor={colors.primary}
+                />
+                <SummaryCard 
+                  label="PRESENT" 
+                  value={presentCount} 
+                  topBorderColor={colors.secondary} 
+                  valueColor={colors.secondary}
+                />
+                <SummaryCard 
+                  label="ABSENT" 
+                  value={absentCount} 
+                  topBorderColor={colors.error} 
+                  valueColor={colors.error}
+                />
+                <SummaryCard 
+                  label="DAY OFF" 
+                  value={dayOffCount} 
+                  topBorderColor={colors.outline} 
+                />
+              </View>
+            )}
+
+            {/* Daily View: Quick Actions & List Header */}
+            {viewMode === 'daily' && (
+              <>
+                <View style={[styles.quickActionsCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
+                  <Text style={[styles.quickActionsTitle, { color: colors.outline }]}>QUICK ATTENDANCE ACTIONS</Text>
+                  <View style={styles.bulkActionsRow}>
+                    <TouchableOpacity 
+                      style={[styles.bulkButton, { backgroundColor: colors.secondaryContainer }]}
+                      onPress={() => handleBulkStatusChange('present')}
+                    >
+                      <MaterialIcons name="check-circle" size={20} color={colors.onSecondaryContainer} />
+                      <Text style={[styles.bulkButtonText, { color: colors.onSecondaryContainer }]}>All Present</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.bulkButton, { backgroundColor: colors.errorContainer }]}
+                      onPress={() => handleBulkStatusChange('absent')}
+                    >
+                      <MaterialIcons name="cancel" size={20} color={colors.onErrorContainer} />
+                      <Text style={[styles.bulkButtonText, { color: colors.onErrorContainer }]}>All Absent</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.bulkButton, { backgroundColor: colors.surfaceVariant }]}
+                      onPress={() => handleBulkStatusChange('dayOff')}
+                    >
+                      <MaterialIcons name="event-busy" size={20} color={colors.onSurfaceVariant} />
+                      <Text style={[styles.bulkButtonText, { color: colors.onSurfaceVariant }]}>Day Off</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.listHeader}>
+                  <Text style={[styles.listTitle, { color: colors.onSurface }]}>Student List</Text>
+                </View>
+              </>
+            )}
+
+            {/* Monthly Summary Configuration & Header (Part of the unified table) */}
+            {viewMode === 'monthly' && (
+              <View style={[
+                styles.monthlyCard, 
+                { 
+                  backgroundColor: colors.surfaceContainerLowest, 
+                  borderColor: colors.surfaceVariant,
+                  marginBottom: 0,
+                  paddingBottom: 0, // Remove internal bottom padding
+                  borderBottomWidth: 0,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
+                }
+              ]}>
+                <View style={styles.monthlyInputRow}>
+                  <Text style={[styles.inputLabel, { color: colors.outline }]}>TOTAL SESSIONS THIS MONTH</Text>
+                  <View style={[styles.inputWrapper, { backgroundColor: colors.surface }]}>
+                    <MaterialIcons name="event-available" size={20} color={colors.primary} />
+                    <TextInput
+                      style={[styles.textInput, { color: colors.onSurface, flex: 1, marginLeft: 8, textAlign: 'center' }]}
+                      value={totalExpected}
+                      onChangeText={handleUpdateExpected}
+                      keyboardType="numeric"
+                      placeholder="Enter total sessions"
+                    />
+                    <MaterialIcons name="lock" size={18} color={colors.error} style={{ marginLeft: 8 }} />
+                  </View>
+                </View>
+
+                <View style={styles.table}>
+                  <View style={[styles.tableHeader, { borderBottomColor: colors.surfaceVariant }]}>
+                    <Text style={[styles.th, { color: colors.outline, flex: 2 }]}>STUDENT</Text>
+                    <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>PRES</Text>
+                    <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>TOT</Text>
+                    <Text style={[styles.th, { color: colors.outline, flex: 1.2, textAlign: 'right' }]}>RATE</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </>
+        }
         keyExtractor={(item) => item.student_id?.toString() || item.id?.toString()}
         renderItem={({ item, index }) => {
           const isOdd = index % 2 !== 0;
@@ -458,7 +457,7 @@ export default function AttendanceScreen() {
         ListEmptyComponent={
           isLoading && (viewMode === 'daily' ? students.length === 0 : monthlyStats.length === 0) ? (
             <View style={{ gap: 12, paddingHorizontal: 16 }}>
-              {[1, 2, 3, 4, 5].map(i => <AttendanceSkeleton key={i} />)}
+              {[1, 2, 3, 4, 5].map(i => <AttendanceSkeleton key={i} colors={colors} />)}
             </View>
           ) : !isLoading && (viewMode === 'daily' ? students.length === 0 : monthlyStats.length === 0) ? (
             <View style={styles.emptyState}>
