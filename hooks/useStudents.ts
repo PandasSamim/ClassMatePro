@@ -68,8 +68,8 @@ export const useStudents = () => {
       
       if (searchQuery) {
         query += classId ? ` AND` : ` WHERE`;
-        query += ` (s.first_name LIKE ? OR s.last_name LIKE ?)`;
-        params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+        query += ` (s.first_name || ' ' || s.last_name LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ?)`;
+        params.push(`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`);
       }
 
       query += ` ORDER BY s.first_name ASC LIMIT ? OFFSET ?`;
