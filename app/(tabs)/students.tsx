@@ -8,8 +8,10 @@ import { useStudents } from '@/hooks/useStudents';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, InteractionManager, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { ActivityIndicator, Alert, FlatList, InteractionManager, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
+import Animated, { FadeInUp, FadeInDown, SlideInRight, SlideInLeft } from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
 
 export default function StudentsScreen() {
   const colorScheme = useColorScheme();
@@ -17,29 +19,21 @@ export default function StudentsScreen() {
   const router = useRouter();
   const [isAddClassVisible, setAddClassVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  
   const { classes, students, loading, fetchClasses, fetchStudents, addClass, deleteStudent, deleteClass } = useStudents();
   const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
   const [offset, setOffset] = useState(0);
   const LIMIT = 20;
-
-  const StudentSkeleton = ({ colors }: { colors: any }) => (
-    <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-      <View style={[styles.skeletonAvatar, { backgroundColor: colors.surfaceVariant }]} />
-      <View style={{ flex: 1, gap: 8 }}>
-        <View style={[styles.skeletonLine, { width: '60%', height: 14, backgroundColor: colors.surfaceVariant }]} />
-        <View style={[styles.skeletonLine, { width: '40%', height: 10, backgroundColor: colors.surfaceVariant }]} />
-      </View>
-      <View style={[styles.skeletonBadge, { backgroundColor: colors.surfaceVariant }]} />
-    </View>
-  );
 
   useFocusEffect(
     useCallback(() => {
       const task = InteractionManager.runAfterInteractions(() => {
         setOffset(0);
         fetchClasses();
-        fetchStudents(selectedClassId, searchQuery, LIMIT, 0);
+        if (selectedClassId) {
+          fetchStudents(selectedClassId, searchQuery, LIMIT, 0);
+        }
       });
       return () => task.cancel();
     }, [selectedClassId, searchQuery, fetchClasses, fetchStudents])
@@ -65,21 +59,18 @@ export default function StudentsScreen() {
   const handleDeleteClass = (id: number, name: string) => {
     Alert.alert(
       "Delete Class",
-      `Are you sure you want to delete ${name}? All student associations will be removed.`,
+      `Are you sure you want to delete ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
+        { 
+          text: "Delete", 
+          style: "destructive", 
           onPress: async () => {
             const success = await deleteClass(id);
             if (success) {
               if (selectedClassId === id) setSelectedClassId(undefined);
-              Alert.alert("Success", "Class deleted successfully.");
-            } else {
-              Alert.alert("Error", "Could not delete class.");
             }
-          }
+          } 
         }
       ]
     );
@@ -91,163 +82,160 @@ export default function StudentsScreen() {
       `Are you sure you want to delete ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
+        { 
+          text: "Delete", 
+          style: "destructive", 
           onPress: async () => {
             const success = await deleteStudent(id);
-            if (success) {
-              Alert.alert("Success", "Student deleted successfully.");
-            } else {
-              Alert.alert("Error", "Could not delete student.");
-            }
-          }
+          } 
         }
       ]
     );
   };
 
-  return (
-    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <TopNavbar />
+  const selectedClass = selectedClassId ? classes.find(c => c.id === selectedClassId) : null;
+
+  // View 1: List of Folders (Classes)
+  const renderClassList = () => (
+    <Animated.View entering={FadeInUp.duration(600)} style={styles.viewContainer}>
+      <View style={styles.headerContainer}>
+        <Text style={[styles.pageTitle, { color: colors.onBackground }]}>Explorer</Text>
+        <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Choose a folder to view files</Text>
+      </View>
+
+      <FlatList
+        data={classes}
+        keyExtractor={(item) => item.id.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.classListContent}
+        renderItem={({ item, index }) => (
+          <ClassItem 
+            name={item.name}
+            count={`${item.student_count || 0} students`}
+            pendingCount="4"
+            amount={`₹${(item.monthly_fees || 0).toLocaleString()}`}
+            isActive={false}
+            onPress={() => {
+              setSelectedClassId(item.id);
+              fetchStudents(item.id, '', LIMIT, 0);
+            }}
+            onDelete={() => handleDeleteClass(item.id, item.name)}
+            index={index}
+          />
+        )}
+        ListFooterComponent={
+          <TouchableOpacity 
+            style={[styles.addClassBtn, { backgroundColor: colors.primaryContainer }]} 
+            onPress={() => setAddClassVisible(true)}
+          >
+            <MaterialIcons name="add" size={24} color={colors.onPrimaryContainer} />
+            <Text style={[styles.addClassBtnText, { color: colors.onPrimaryContainer }]}>Create New Folder</Text>
+          </TouchableOpacity>
+        }
+        ListEmptyComponent={
+          !loading ? (
+            <TouchableOpacity style={styles.emptyClasses} onPress={() => setAddClassVisible(true)}>
+              <MaterialIcons name="create-new-folder" size={48} color={colors.outlineVariant} />
+              <Text style={{ color: colors.onSurfaceVariant, marginTop: 12 }}>No classes found. Tap to add.</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
+    </Animated.View>
+  );
+
+  // View 2: Inside Folder (Students)
+  const renderStudentList = () => (
+    <Animated.View entering={SlideInRight.duration(400)} style={styles.viewContainer}>
+      <View style={styles.insideHeader}>
+        <TouchableOpacity 
+          style={[styles.backBtn, { backgroundColor: colors.surfaceContainerLow }]}
+          onPress={() => setSelectedClassId(undefined)}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={colors.onSurface} />
+        </TouchableOpacity>
+        <View style={styles.pathContainer}>
+          <Text style={[styles.pathRoot, { color: colors.onSurfaceVariant }]}>Explorer</Text>
+          <MaterialIcons name="chevron-right" size={16} color={colors.outlineVariant} />
+          <Text style={[styles.pathCurrent, { color: colors.primary }]}>{selectedClass?.name}</Text>
+        </View>
+      </View>
+
+      <View style={[
+        styles.searchWrapper, 
+        { 
+          backgroundColor: colors.surfaceContainerLow, 
+          borderColor: isSearchFocused ? colors.primary : 'transparent',
+          borderWidth: 1
+        }
+      ]}>
+        <MaterialIcons name="search" size={20} color={isSearchFocused ? colors.primary : colors.outline} />
+        <TextInput 
+          style={[styles.searchInput, { color: colors.onSurface }]}
+          placeholder="Search files..."
+          placeholderTextColor={colors.outline}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+        />
+      </View>
+
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant }]}>NAME</Text>
+        <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant }]}>STATUS</Text>
+      </View>
 
       <FlatList
         data={students}
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <Animated.View entering={FadeInUp.duration(600)}>
-            {/* Modern Header */}
-            <View style={styles.headerContainer}>
-              <View>
-                <Text style={[styles.pageTitle, { color: colors.onBackground }]}>Students</Text>
-                <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Directory & Management</Text>
-              </View>
-              <View style={[styles.statsCard, { backgroundColor: colors.primaryContainer }]}>
-                <Text style={[styles.statsNumber, { color: colors.onPrimaryContainer }]}>{students.length}</Text>
-                <Text style={[styles.statsLabel, { color: colors.onPrimaryContainer }]}>Total</Text>
-              </View>
-            </View>
-
-            {/* Integrated Search */}
-            <View style={[styles.searchWrapper, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
-              <MaterialIcons name="search" size={22} color={colors.primary} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.onSurface }]}
-                placeholder="Search students..."
-                placeholderTextColor={colors.outline}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery !== '' && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <MaterialIcons name="cancel" size={20} color={colors.outline} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Horizontal Classes List */}
-            <View style={styles.classesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Groups</Text>
-                <TouchableOpacity
-                  style={[styles.addClassButton, { backgroundColor: colors.secondaryContainer }]}
-                  onPress={() => setAddClassVisible(true)}
-                >
-                  <MaterialIcons name="add" size={18} color={colors.onSecondaryContainer} />
-                  <Text style={[styles.addClassText, { color: colors.onSecondaryContainer }]}>New</Text>
-                </TouchableOpacity>
-              </View>
-
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={[{ id: 'all', name: 'All Students' }, ...classes]}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => {
-                  const isAll = item.id === 'all';
-                  const isActive = isAll ? !selectedClassId : selectedClassId === item.id;
-                  return (
-                    <ClassItem
-                      name={item.name}
-                      count={isAll ? `${students.length} Total` : `${(item as any).student_count || 0} Students`}
-                      isActive={isActive}
-                      onPress={() => setSelectedClassId(isAll ? undefined : item.id as number)}
-                      onDelete={isAll ? undefined : () => handleDeleteClass(item.id as number, item.name)}
-                    />
-                  );
-                }}
-                contentContainerStyle={styles.classesContent}
-              />
-            </View>
-
-            <View style={styles.rosterHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Student Roster</Text>
-              <Text style={[styles.countBadge, { color: colors.primary }]}>
-                {selectedClassId ? classes.find(c => c.id === selectedClassId)?.name : 'All Records'}
-              </Text>
-            </View>
-          </Animated.View>
-        }
         keyExtractor={(item) => item.id.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.studentListContent}
         renderItem={({ item: s, index }) => (
-          <StudentRow
+          <StudentRow 
             index={index}
             name={`${s.first_name} ${s.last_name}`}
-            avatarInitials={`${s.first_name[0]}${s.last_name[0]}`}
-            avatarUrl={s.avatar_url || undefined}
-            avatarBg={colors.primaryContainer}
-            avatarText={colors.onPrimaryContainer}
-            status={s.status}
-            statusVariant={s.status.toLowerCase() === 'enrolled' ? 'success' : s.status.toLowerCase() === 'absent' ? 'error' : 'neutral'}
-            badgeIcon={s.status.toLowerCase() === 'enrolled' ? 'verified' : undefined}
-            statusOutlined={s.status.toLowerCase() === 'absent'}
-            onPress={() => router.push({
-              pathname: '/student/[id]',
-              params: {
-                id: s.id,
-                name: `${s.first_name} ${s.last_name}`,
-                avatarUrl: s.avatar_url || ''
-              }
+            dueAmount="₹500" // Placeholder for demonstration
+            onPress={() => router.push({ 
+              pathname: '/student/[id]', 
+              params: { id: s.id, name: `${s.first_name} ${s.last_name}` } 
             })}
             onDelete={() => handleDeleteStudent(s.id, `${s.first_name} ${s.last_name}`)}
           />
         )}
         ListEmptyComponent={
           loading ? (
-            <View style={{ gap: 12, marginTop: 12 }}>
-              {[1, 2, 3, 4, 5].map(i => <StudentSkeleton key={i} colors={colors} />)}
-            </View>
+            <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
           ) : (
-            <View style={[styles.emptyContainer, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
-              <MaterialIcons name="person-off" size={64} color={colors.outlineVariant} />
-              <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No Students Found</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.onSurfaceVariant }]}>Try adjusting your search or filters.</Text>
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="folder-open" size={48} color={colors.outlineVariant} />
+              <Text style={{ color: colors.onSurfaceVariant, marginTop: 12 }}>Folder is empty</Text>
             </View>
           )
-        }
-        ListFooterComponent={
-          loading && students.length > 0 ? (
-            <View style={{ padding: 20 }}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : <View style={{ height: 100 }} />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
       />
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => router.push('/add-student')}
-        activeOpacity={0.8}
-      >
-        <MaterialIcons name="person-add" size={24} color={colors.onPrimary} />
-      </TouchableOpacity>
+      <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.fabContainer}>
+        <TouchableOpacity 
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => router.push('/add-student')}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="note-add" size={24} color={colors.onPrimary} />
+        </TouchableOpacity>
+      </Animated.View>
+    </Animated.View>
+  );
 
-      <AddClassModal
+  return (
+    <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
+      <TopNavbar />
+      
+      {selectedClassId ? renderStudentList() : renderClassList()}
+
+      <AddClassModal 
         visible={isAddClassVisible}
         onClose={() => setAddClassVisible(false)}
         onAdd={handleAddClass}
@@ -257,170 +245,131 @@ export default function StudentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  mainContainer: {
     flex: 1,
   },
-  container: {
+  viewContainer: {
     flex: 1,
-  },
-  contentContainer: {
     paddingHorizontal: 20,
     paddingTop: 16,
   },
   headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   pageTitle: {
     fontSize: 32,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   pageSubtitle: {
     fontSize: 14,
-    fontWeight: '500',
     opacity: 0.7,
   },
-  statsCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  classListContent: {
+    paddingBottom: 40,
+  },
+  addClassBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 60,
+    padding: 16,
+    borderRadius: 24,
+    marginTop: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
-  statsNumber: {
+  addClassBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  insideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pathContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pathRoot: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pathCurrent: {
     fontSize: 18,
     fontWeight: '800',
-  },
-  statsLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
   },
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    height: 48,
+    borderRadius: 24,
+    gap: 12,
+    marginBottom: 16,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
     fontSize: 16,
     fontWeight: '500',
   },
-  classesSection: {
-    marginBottom: 24,
-    marginTop: -8,
-  },
-  sectionHeader: {
+  tableHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  sectionTitle: {
-    fontSize: 22,
+  tableHeaderText: {
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: 1,
+    opacity: 0.3,
   },
-  addClassButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    gap: 4,
-  },
-  addClassText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  classesContent: {
-    paddingHorizontal: 4,
-    paddingBottom: 16,
-    paddingRight: 40, // Extra space at end of scroll
-  },
-  rosterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-    marginTop: 8,
-  },
-  countBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    opacity: 0.8,
+  studentListContent: {
+    paddingBottom: 100,
   },
   emptyContainer: {
-    padding: 40,
+    padding: 60,
     alignItems: 'center',
+    opacity: 0.5,
+  },
+  emptyClasses: {
+    padding: 60,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.02)',
     borderRadius: 24,
     borderWidth: 1,
     borderStyle: 'dashed',
-    marginTop: 20,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-    opacity: 0.7,
-  },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     right: 20,
     bottom: 30,
+  },
+  fab: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-    marginBottom: 12,
-  },
-  skeletonAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  skeletonLine: {
-    height: 14,
-    borderRadius: 4,
-  },
-  skeletonBadge: {
-    width: 70,
-    height: 24,
-    borderRadius: 12,
-  },
+    shadowRadius: 8,
+  }
 });

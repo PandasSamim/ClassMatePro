@@ -1,71 +1,59 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Avatar } from '@/components/ui/Avatar';
-import { Badge, BadgeVariant } from '@/components/ui/Badge';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRouter } from 'expo-router';
+import Animated, { FadeInUp, Layout } from 'react-native-reanimated';
 
 interface StudentRowProps {
   name: string;
-  avatarInitials?: string;
   avatarUrl?: string;
-  avatarBg?: string;
-  avatarText?: string;
-  status: string;
-  statusVariant: BadgeVariant;
-  statusOutlined?: boolean;
-  badgeIcon?: keyof typeof MaterialIcons.glyphMap;
+  avatarInitials?: string;
+  dueAmount?: string;
   onPress?: () => void;
-  onMorePress?: () => void;
   onDelete?: () => void;
   index?: number;
 }
 
 export function StudentRow({ 
-  name, avatarInitials, avatarUrl, avatarBg, avatarText, 
-  status, statusVariant, statusOutlined, badgeIcon, onPress, onMorePress, onDelete 
+  name, avatarUrl, avatarInitials, dueAmount = "₹0", onPress, onDelete, index = 0
 }: StudentRowProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
 
   return (
-    <TouchableOpacity 
-      style={[styles.container, { borderBottomColor: colors.surfaceVariant }]}
-      onPress={onPress || (() => router.push({ pathname: '/student/[id]', params: { id: name.replace(/\s+/g, '-').toLowerCase(), name } }))}
+    <Animated.View 
+      entering={FadeInUp.delay(index * 40).duration(300)}
+      layout={Layout.springify()}
     >
-      <View style={styles.avatarColumn}>
-        <Avatar 
-          initials={avatarInitials} 
-          imageUrl={avatarUrl} 
-          size={32}
-          backgroundColor={avatarBg}
-          textColor={avatarText}
-        />
-      </View>
+      <TouchableOpacity 
+        style={[styles.container, { borderBottomColor: colors.surfaceContainerLow }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.leftArea}>
+          <View style={[styles.avatarContainer, { backgroundColor: colors.primaryFixed }]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <Text style={[styles.initials, { color: colors.onPrimaryFixed }]}>
+                {avatarInitials || name.charAt(0)}
+              </Text>
+            )}
+          </View>
+          <View style={styles.nameContainer}>
+            <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.dueText, { color: colors.error }]}>Due: {dueAmount}</Text>
+          </View>
+        </View>
 
-      <View style={styles.nameColumn}>
-        <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>{name}</Text>
-      </View>
-      
-      <View style={styles.statusColumn}>
-        <Badge label={status} variant={statusVariant} outlined={statusOutlined} badgeIcon={badgeIcon} />
-      </View>
-      
-      <View style={styles.actionColumn}>
-        {onDelete ? (
-          <TouchableOpacity style={styles.moreButton} onPress={onDelete}>
-            <MaterialIcons name="delete-outline" size={20} color={colors.error} />
+        <View style={styles.rightArea}>
+          <TouchableOpacity onPress={onDelete} style={[styles.deleteButton, { backgroundColor: colors.errorContainer }]}>
+            <MaterialIcons name="delete-outline" size={18} color={colors.onErrorContainer} />
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.moreButton} onPress={onMorePress}>
-            <MaterialIcons name="more-vert" size={20} color={colors.outline} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -73,35 +61,56 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 0,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
-  avatarColumn: {
-    width: 44,
+  leftArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  nameColumn: {
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  initials: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  nameContainer: {
     flex: 1,
-    paddingLeft: 4,
   },
   name: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
-  statusColumn: {
-    width: 90,
+  dueText: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  rightArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  actionColumn: {
-    width: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingRight: 8,
-  },
-  moreButton: {
-    padding: 8,
   },
 });
