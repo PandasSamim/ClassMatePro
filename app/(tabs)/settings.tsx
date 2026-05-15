@@ -13,11 +13,17 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
-const Card = ({ children, style }: { children: React.ReactNode, style?: any }) => {
+const Card = ({ children, style, accent }: { children: React.ReactNode, style?: any, accent?: string }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.surfaceVariant }, style]}>
+    <View style={[
+      styles.card, 
+      { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }, 
+      accent && { borderTopWidth: 4, borderTopColor: accent },
+      style
+    ]}>
+      {accent && <View style={[styles.cardGlow, { backgroundColor: accent }]} />}
       {children}
     </View>
   );
@@ -33,7 +39,6 @@ export default function SettingsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     admin_name: '',
-    admin_email: '',
     admin_avatar: ''
   });
 
@@ -44,7 +49,6 @@ export default function SettingsScreen() {
     if (settings) {
       setEditForm({
         admin_name: settings.admin_name,
-        admin_email: settings.admin_email,
         admin_avatar: settings.admin_avatar || ''
       });
     }
@@ -240,7 +244,7 @@ export default function SettingsScreen() {
           
           {/* Left Column: Admin Profile */}
           <View style={styles.leftColumn}>
-            <Card>
+            <Card accent="#5e00cd">
               <View style={styles.adminProfileHeader}>
                 <View style={styles.profileImageContainer}>
                   <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
@@ -280,23 +284,6 @@ export default function SettingsScreen() {
                 <Text style={[styles.adminRole, { color: colors.primary }]}>SYSTEM ADMINISTRATOR</Text>
               </View>
 
-              <View style={styles.infoFields}>
-                <View style={[styles.infoField, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.surfaceVariant }]}>
-                  <Text style={[styles.infoFieldLabel, { color: colors.outline }]}>EMAIL ADDRESS</Text>
-                  {isEditing ? (
-                    <TextInput 
-                      style={[styles.infoFieldValueInput, { color: colors.onSurface }]}
-                      value={editForm.admin_email}
-                      onChangeText={(text) => setEditForm(prev => ({...prev, admin_email: text}))}
-                      placeholder="admin@example.com"
-                      keyboardType="email-address"
-                    />
-                  ) : (
-                    <Text style={[styles.infoFieldValue, { color: colors.onSurface }]} numberOfLines={1}>{settings?.admin_email || 'not set'}</Text>
-                  )}
-                </View>
-              </View>
-
               {isEditing && (
                 <TouchableOpacity 
                   style={[styles.saveButton, { backgroundColor: colors.primary, marginTop: 24 }]}
@@ -317,27 +304,27 @@ export default function SettingsScreen() {
               
               <View style={styles.dataManagementStack}>
                 <TouchableOpacity 
-                  style={[styles.uploadButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, borderWidth: 1 }]}
+                  style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, borderWidth: 1 }]}
                   onPress={handleImportDatabase}
                 >
-                  <MaterialIcons name="file-upload" size={18} color={colors.primary} />
+                  <MaterialIcons name="file-upload" size={18} color="#006c4b" />
                   <Text style={[styles.uploadButtonText, { color: colors.onSurface }]}>Import Database</Text>
                 </TouchableOpacity>
  
                 <TouchableOpacity 
-                  style={[styles.uploadButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, borderWidth: 1 }]}
+                  style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, borderWidth: 1 }]}
                   onPress={handleExportDatabase}
                 >
-                  <MaterialIcons name="storage" size={18} color={colors.primary} />
-                  <Text style={[styles.uploadButtonText, { color: colors.onSurface }]}>Download Database</Text>
+                  <MaterialIcons name="storage" size={18} color="#003fb1" />
+                  <Text style={[styles.uploadButtonText, { color: colors.onSurface }]}>Backup Database</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[styles.uploadButton, { backgroundColor: colors.errorContainer, borderColor: colors.error, borderWidth: 1 }]}
+                  style={[styles.uploadButton, { backgroundColor: '#fce8e6', borderColor: '#8b2500', borderWidth: 1 }]}
                   onPress={handleWipeData}
                 >
-                  <MaterialIcons name="delete-forever" size={18} color={colors.onErrorContainer} />
-                  <Text style={[styles.uploadButtonText, { color: colors.onErrorContainer }]}>Wipe All Data</Text>
+                  <MaterialIcons name="delete-forever" size={18} color="#8b2500" />
+                  <Text style={[styles.uploadButtonText, { color: '#8b2500' }]}>Wipe All Data</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -409,10 +396,20 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  cardGlow: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    opacity: 0.05,
   },
   adminProfileHeader: {
     alignItems: 'center',
@@ -423,13 +420,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   avatarImage: {
     width: '100%',
@@ -441,24 +442,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '30%',
+    height: '35%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   editButton: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
+    bottom: 4,
+    right: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
   },
   adminName: {
@@ -548,23 +549,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   aboutList: {
-    gap: 16,
+    gap: 8,
   },
   aboutListItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderBottomWidth: 1,
   },
   aboutListItemLast: {
     borderBottomWidth: 0,
-    paddingBottom: 0,
   },
   aboutListLabel: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '500',
   },
   aboutListValue: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

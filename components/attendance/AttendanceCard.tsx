@@ -1,9 +1,10 @@
-import { Avatar } from '@/components/ui/Avatar';
+import { MaterialIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AttendanceStatus } from '@/hooks/useAttendance';
+
 export { AttendanceStatus };
 
 interface AttendanceCardProps {
@@ -13,71 +14,69 @@ interface AttendanceCardProps {
   avatarInitials?: string;
   status: AttendanceStatus;
   onStatusChange?: (status: AttendanceStatus) => void;
-  backgroundColor?: string;
 }
 
 export function AttendanceCard({
-  name, id, avatarUrl, avatarInitials, status, onStatusChange, backgroundColor
+  name, id, avatarUrl, avatarInitials, status, onStatusChange
 }: AttendanceCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const isAbsent = status === 'absent';
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'present': return { color: '#006c4b', icon: 'check-circle' };
+      case 'absent': return { color: '#8b2500', icon: 'cancel' };
+      case 'dayOff': return { color: '#5e00cd', icon: 'event-busy' };
+      default: return { color: colors.outline, icon: 'radio-button-unchecked' };
+    }
+  };
+
+  const config = getStatusConfig();
 
   return (
-    <View style={[
-      styles.card,
-      { backgroundColor: backgroundColor || colors.surface, borderColor: colors.outlineVariant },
-      isAbsent && { backgroundColor: 'rgba(255, 218, 214, 0.1)', borderColor: colors.errorContainer }
-    ]}>
-      <View style={styles.info}>
-        <Avatar
-          initials={avatarInitials}
-          imageUrl={avatarUrl}
-          size={48}
-        />
-        <View style={styles.textInfo}>
-          <Text style={[styles.name, { color: colors.onSurface }]}>{name}</Text>
-          <Text style={[styles.id, { color: colors.onSurfaceVariant }]}>{id}</Text>
+    <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+      <View style={styles.topRow}>
+        <View style={styles.studentInfo}>
+          <View style={[styles.avatarFrame, { borderColor: status ? config.color : 'rgba(0,0,0,0.05)' }]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.initialsAvatar, { backgroundColor: colors.surfaceVariant }]}>
+                <Text style={[styles.initialsText, { color: colors.onSurfaceVariant }]}>{avatarInitials}</Text>
+              </View>
+            )}
+            {status && (
+              <View style={[styles.statusDot, { backgroundColor: config.color }]}>
+                <MaterialIcons name={config.icon as any} size={10} color="#fff" />
+              </View>
+            )}
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.id, { color: colors.outline }]}>{id}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            status === 'present' ? [styles.buttonActive, { backgroundColor: colors.secondary, borderColor: colors.secondary }] : styles.buttonInactive
-          ]}
-          onPress={() => onStatusChange?.('present')}
-        >
-          <Text style={[styles.buttonText, status === 'present' ? { color: colors.onSecondary } : { color: colors.onSurfaceVariant }]}>
-            Present
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            status === 'absent' ? [styles.buttonActive, { backgroundColor: colors.error, borderColor: colors.error }] : styles.buttonInactive
-          ]}
-          onPress={() => onStatusChange?.('absent')}
-        >
-          <Text style={[styles.buttonText, status === 'absent' ? { color: colors.onError } : { color: colors.onSurfaceVariant }]}>
-            Absent
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            status === 'dayOff' ? [styles.buttonActive, { backgroundColor: colors.primary, borderColor: colors.primary }] : styles.buttonInactive
-          ]}
-          onPress={() => onStatusChange?.('dayOff')}
-        >
-          <Text style={[styles.buttonText, status === 'dayOff' ? { color: colors.onPrimary } : { color: colors.onSurfaceVariant }]}>
-            Day Off
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            onPress={() => onStatusChange?.('present')}
+            style={[styles.miniBtn, status === 'present' && { backgroundColor: '#e6f4ea', borderColor: '#006c4b' }]}
+          >
+            <MaterialIcons name="check" size={18} color={status === 'present' ? '#006c4b' : colors.outline} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => onStatusChange?.('absent')}
+            style={[styles.miniBtn, status === 'absent' && { backgroundColor: '#fce8e6', borderColor: '#8b2500' }]}
+          >
+            <MaterialIcons name="close" size={18} color={status === 'absent' ? '#8b2500' : colors.outline} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => onStatusChange?.('dayOff')}
+            style={[styles.miniBtn, status === 'dayOff' && { backgroundColor: '#f3e5f5', borderColor: '#5e00cd' }]}
+          >
+            <MaterialIcons name="event-busy" size={18} color={status === 'dayOff' ? '#5e00cd' : colors.outline} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -85,53 +84,88 @@ export function AttendanceCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 20,
+    padding: 12,
     borderWidth: 1,
-    flexDirection: 'column',
-    gap: 16,
-    ...(Platform.OS === 'web' ? { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' } : {}),
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  info: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'space-between',
   },
-  textInfo: {
-    flexDirection: 'column',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  id: {
-    fontSize: 14,
-  },
-  actions: {
+  studentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    ...(Platform.OS === 'web' ? { width: 'auto', alignSelf: 'auto' } : {}),
-  },
-  button: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    gap: 12,
+  },
+  avatarFrame: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 2,
+    padding: 2,
+    position: 'relative',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  initialsAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonInactive: {
-    borderColor: '#c3c5d7',
-    backgroundColor: '#f8f9fa',
+  initialsText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  buttonActive: {
-    // colors set dynamically
+  statusDot: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonText: {
-    fontSize: 11,
+  textContainer: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 15,
     fontWeight: '700',
-    textAlign: 'center',
+    letterSpacing: -0.2,
+  },
+  id: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  miniBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

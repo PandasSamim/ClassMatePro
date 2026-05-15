@@ -7,11 +7,8 @@ import { useStudents } from '@/hooks/useStudents';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
 
 export default function AttendanceScreen() {
@@ -39,20 +36,6 @@ export default function AttendanceScreen() {
 
   const [currentMonthKey, setCurrentMonthKey] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const isLoading = studentsLoading || attendanceLoading;
-
-const AttendanceSkeleton = ({ colors }: { colors: any }) => (
-  <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-    <View style={{ flex: 1, gap: 8 }}>
-      <View style={[styles.skeletonLine, { width: '50%', height: 16, backgroundColor: colors.surfaceVariant }]} />
-      <View style={[styles.skeletonLine, { width: '30%', height: 10, backgroundColor: colors.surfaceVariant }]} />
-    </View>
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {[1, 2, 3].map(i => (
-        <View key={i} style={[styles.skeletonCircle, { backgroundColor: colors.surfaceVariant }]} />
-      ))}
-    </View>
-  </View>
-);
 
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [totalExpected, setTotalExpected] = useState('0');
@@ -151,17 +134,14 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
   };
 
   const handleBulkStatusChange = async (status: AttendanceStatus) => {
-    console.log(`Bulk status change requested: ${status} for ${students.length} students`);
     if (students.length === 0) {
       Alert.alert("Info", "No students found in this class to mark.");
       return;
     }
     const studentIds = students.map(s => s.id);
     const success = await markAllStatus(studentIds, selectedDate, status as string);
-    console.log(`Bulk status result: ${success}`);
     if (success) {
       await fetchAttendanceByDate(selectedDate, selectedClassId || undefined);
-      // Removed Alert.alert here
     } else {
       Alert.alert("Error", "Failed to update attendance records.");
     }
@@ -177,6 +157,19 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
   const currentMonthStr = todayStr.slice(0, 7);
   const isAtFutureEnd = viewMode === 'daily' ? selectedDate >= todayStr : currentMonthKey >= currentMonthStr;
 
+  const AttendanceSkeleton = ({ colors }: { colors: any }) => (
+    <View style={[styles.skeletonRow, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+      <View style={{ flex: 1, gap: 8 }}>
+        <View style={[styles.skeletonLine, { width: '50%', height: 16, backgroundColor: colors.surfaceVariant }]} />
+        <View style={[styles.skeletonLine, { width: '30%', height: 10, backgroundColor: colors.surfaceVariant }]} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {[1, 2, 3].map(i => (
+          <View key={i} style={[styles.skeletonCircle, { backgroundColor: colors.surfaceVariant }]} />
+        ))}
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -188,19 +181,18 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            {/* Class Selector */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classSelector}>
               <TouchableOpacity
                 style={[
                   styles.classItem,
-                  { backgroundColor: selectedClassId === null ? colors.primaryContainer : colors.surfaceContainer },
+                  { backgroundColor: selectedClassId === null ? colors.primaryContainer : colors.surfaceContainerLowest },
                   selectedClassId === null && { borderColor: colors.primary, borderWidth: 1 }
                 ]}
                 onPress={() => setSelectedClassId(null)}
               >
                 <Text style={[
                   styles.classItemText,
-                  { color: selectedClassId === null ? colors.onPrimaryContainer : colors.onSurfaceVariant }
+                  { color: selectedClassId === null ? colors.onPrimaryContainer : colors.outline }
                 ]}>
                   All Classes
                 </Text>
@@ -211,14 +203,14 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
                   key={cls.id.toString()}
                   style={[
                     styles.classItem,
-                    { backgroundColor: selectedClassId === cls.id ? colors.primaryContainer : colors.surfaceContainer },
+                    { backgroundColor: selectedClassId === cls.id ? colors.primaryContainer : colors.surfaceContainerLowest },
                     selectedClassId === cls.id && { borderColor: colors.primary, borderWidth: 1 }
                   ]}
                   onPress={() => setSelectedClassId(cls.id)}
                 >
                   <Text style={[
                     styles.classItemText,
-                    { color: selectedClassId === cls.id ? colors.onPrimaryContainer : colors.onSurfaceVariant }
+                    { color: selectedClassId === cls.id ? colors.onPrimaryContainer : colors.outline }
                   ]}>
                     {cls.name}
                   </Text>
@@ -226,34 +218,32 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
               ))}
             </ScrollView>
 
-            {/* View Mode Toggle */}
-            <View style={[styles.viewToggle, { backgroundColor: colors.surfaceContainer }]}>
+            <View style={[styles.viewToggle, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, borderWidth: 1 }]}>
               <TouchableOpacity 
-                style={[styles.toggleBtn, viewMode === 'daily' && { backgroundColor: colors.surface }]} 
+                style={[styles.toggleBtn, viewMode === 'daily' && { backgroundColor: colors.primary }]} 
                 onPress={() => setViewMode('daily')}
               >
-                <Text style={[styles.toggleText, { color: viewMode === 'daily' ? colors.primary : colors.onSurfaceVariant }]}>Daily</Text>
+                <Text style={[styles.toggleText, { color: viewMode === 'daily' ? colors.onPrimary : colors.outline }]}>Daily</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.toggleBtn, viewMode === 'monthly' && { backgroundColor: colors.surface }]} 
+                style={[styles.toggleBtn, viewMode === 'monthly' && { backgroundColor: colors.primary }]} 
                 onPress={() => setViewMode('monthly')}
               >
-                <Text style={[styles.toggleText, { color: viewMode === 'monthly' ? colors.primary : colors.onSurfaceVariant }]}>Monthly Summary</Text>
+                <Text style={[styles.toggleText, { color: viewMode === 'monthly' ? colors.onPrimary : colors.outline }]}>Monthly Summary</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Header & Date Controls */}
             <View style={styles.headerContainer}>
               <View style={styles.headerTitles}>
                 <Text style={[styles.pageTitle, { color: colors.onSurface }]}>
                   {viewMode === 'daily' ? 'Daily Attendance' : 'Monthly Summary'}
                 </Text>
-                <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>{selectedClassId ? (currentClass?.name || 'Class') : 'All Classes'}</Text>
+                <Text style={[styles.pageSubtitle, { color: colors.outline }]}>{selectedClassId ? (currentClass?.name || 'Class') : 'All Classes'}</Text>
               </View>
               
-              <View style={[styles.dateControls, { backgroundColor: colors.surfaceContainer }]}>
+              <View style={[styles.dateControls, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, borderWidth: 1 }]}>
                 <TouchableOpacity style={styles.iconButton} onPress={() => viewMode === 'daily' ? navigateDate(-1) : navigateMonth(-1)}>
-                  <MaterialIcons name="chevron-left" size={24} color={colors.onSurfaceVariant} />
+                  <MaterialIcons name="chevron-left" size={24} color={colors.outline} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -274,7 +264,7 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
                   onPress={() => viewMode === 'daily' ? navigateDate(1) : navigateMonth(1)}
                   disabled={isAtFutureEnd}
                 >
-                  <MaterialIcons name="chevron-right" size={24} color={colors.onSurfaceVariant} />
+                  <MaterialIcons name="chevron-right" size={24} color={colors.outline} />
                 </TouchableOpacity>
               </View>
 
@@ -288,61 +278,44 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
                 />
               )}
             </View>
-            {/* Summary Cards */}
+
             {viewMode === 'daily' && (
               <View style={styles.summaryGrid}>
-                <SummaryCard 
-                  label="STUDENTS" 
-                  value={students.length} 
-                  topBorderColor={colors.primary} 
-                  valueColor={colors.primary}
-                />
-                <SummaryCard 
-                  label="PRESENT" 
-                  value={presentCount} 
-                  topBorderColor={colors.secondary} 
-                  valueColor={colors.secondary}
-                />
-                <SummaryCard 
-                  label="ABSENT" 
-                  value={absentCount} 
-                  topBorderColor={colors.error} 
-                  valueColor={colors.error}
-                />
-                <SummaryCard 
-                  label="DAY OFF" 
-                  value={dayOffCount} 
-                  topBorderColor={colors.outline} 
-                />
+                <SummaryCard label="STUDENTS" value={students.length} />
+                <SummaryCard label="PRESENT" value={presentCount} />
+                <SummaryCard label="ABSENT" value={absentCount} />
+                <SummaryCard label="DAY OFF" value={dayOffCount} />
               </View>
             )}
 
-            {/* Daily View: Quick Actions & List Header */}
             {viewMode === 'daily' && (
               <>
-                <View style={[styles.quickActionsCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.surfaceVariant }]}>
-                  <Text style={[styles.quickActionsTitle, { color: colors.outline }]}>QUICK ATTENDANCE ACTIONS</Text>
+                <View style={[styles.quickActionsCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}>
+                  <View style={styles.quickHeader}>
+                    <MaterialIcons name="auto-fix-high" size={14} color={colors.primary} />
+                    <Text style={[styles.quickActionsTitle, { color: colors.outline }]}>BULK ATTENDANCE</Text>
+                  </View>
                   <View style={styles.bulkActionsRow}>
                     <TouchableOpacity 
-                      style={[styles.bulkButton, { backgroundColor: colors.secondaryContainer }]}
+                      style={[styles.bulkButton, { backgroundColor: '#e6f4ea' }]}
                       onPress={() => handleBulkStatusChange('present')}
                     >
-                      <MaterialIcons name="check-circle" size={20} color={colors.onSecondaryContainer} />
-                      <Text style={[styles.bulkButtonText, { color: colors.onSecondaryContainer }]}>All Present</Text>
+                      <MaterialIcons name="check-circle" size={18} color="#006c4b" />
+                      <Text style={[styles.bulkButtonText, { color: '#006c4b' }]}>Present</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.bulkButton, { backgroundColor: colors.errorContainer }]}
+                      style={[styles.bulkButton, { backgroundColor: '#fce8e6' }]}
                       onPress={() => handleBulkStatusChange('absent')}
                     >
-                      <MaterialIcons name="cancel" size={20} color={colors.onErrorContainer} />
-                      <Text style={[styles.bulkButtonText, { color: colors.onErrorContainer }]}>All Absent</Text>
+                      <MaterialIcons name="cancel" size={18} color="#8b2500" />
+                      <Text style={[styles.bulkButtonText, { color: '#8b2500' }]}>Absent</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.bulkButton, { backgroundColor: colors.surfaceVariant }]}
+                      style={[styles.bulkButton, { backgroundColor: '#f3e5f5' }]}
                       onPress={() => handleBulkStatusChange('dayOff')}
                     >
-                      <MaterialIcons name="event-busy" size={20} color={colors.onSurfaceVariant} />
-                      <Text style={[styles.bulkButtonText, { color: colors.onSurfaceVariant }]}>Day Off</Text>
+                      <MaterialIcons name="event-busy" size={18} color="#5e00cd" />
+                      <Text style={[styles.bulkButtonText, { color: '#5e00cd' }]}>Day Off</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -353,37 +326,35 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
               </>
             )}
 
-            {/* Monthly Summary Configuration & Header (Part of the unified table) */}
             {viewMode === 'monthly' && (
               <View style={[
                 styles.monthlyCard, 
                 { 
                   backgroundColor: colors.surfaceContainerLowest, 
-                  borderColor: colors.surfaceVariant,
+                  borderColor: colors.outlineVariant,
                   marginBottom: 0,
-                  paddingBottom: 0, // Remove internal bottom padding
+                  paddingBottom: 0,
                   borderBottomWidth: 0,
                   borderBottomLeftRadius: 0,
                   borderBottomRightRadius: 0,
                 }
               ]}>
                 <View style={styles.monthlyInputRow}>
-                  <Text style={[styles.inputLabel, { color: colors.outline }]}>TOTAL SESSIONS THIS MONTH</Text>
-                  <View style={[styles.inputWrapper, { backgroundColor: colors.surface }]}>
-                    <MaterialIcons name="event-available" size={20} color={colors.primary} />
+                  <Text style={[styles.inputLabel, { color: colors.outline }]}>EXPECTED SESSIONS</Text>
+                  <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, borderWidth: 1 }]}>
+                    <MaterialIcons name="event-note" size={18} color={colors.primary} />
                     <TextInput
-                      style={[styles.textInput, { color: colors.onSurface, flex: 1, marginLeft: 8, textAlign: 'center' }]}
+                      style={[styles.textInput, { color: colors.onSurface, textAlign: 'center' }]}
                       value={totalExpected}
                       onChangeText={handleUpdateExpected}
                       keyboardType="numeric"
-                      placeholder="Enter total sessions"
+                      placeholder="--"
                     />
-                    <MaterialIcons name="lock" size={18} color={colors.error} style={{ marginLeft: 8 }} />
                   </View>
                 </View>
 
                 <View style={styles.table}>
-                  <View style={[styles.tableHeader, { borderBottomColor: colors.surfaceVariant }]}>
+                  <View style={[styles.tableHeader, { borderBottomColor: colors.outlineVariant }]}>
                     <Text style={[styles.th, { color: colors.outline, flex: 2 }]}>STUDENT</Text>
                     <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>PRES</Text>
                     <Text style={[styles.th, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>TOT</Text>
@@ -396,11 +367,6 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
         }
         keyExtractor={(item) => item.student_id?.toString() || item.id?.toString()}
         renderItem={({ item, index }) => {
-          const isOdd = index % 2 !== 0;
-          // Use a slightly more visible tint of the primary brand color
-          const brandTint = `${colors.primary}12`; 
-          const zebraColor = isOdd ? brandTint : colors.surfaceContainerLowest;
-          
           if (viewMode === 'daily') {
             const student = item;
             return (
@@ -412,23 +378,25 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
                   avatarInitials={`${student.first_name[0]}${student.last_name[0]}`}
                   status={getStatus(student.id)}
                   onStatusChange={(status) => handleStatusChange(student.id, status)}
-                  backgroundColor={zebraColor}
                 />
               </View>
             );
           } else {
             const stats = item;
             const isLast = index === (monthlyStats.length - 1);
+            const isOdd = index % 2 !== 0;
+            const zebraColor = isOdd ? 'rgba(0,0,0,0.015)' : colors.background;
+            
             return (
               <View style={[
                 styles.tableRow, 
                 { 
                   backgroundColor: zebraColor,
-                  borderBottomColor: colors.surfaceVariant,
+                  borderBottomColor: colors.outlineVariant,
                   paddingHorizontal: 20,
                   borderLeftWidth: 1,
                   borderRightWidth: 1,
-                  borderColor: colors.surfaceVariant,
+                  borderColor: colors.outlineVariant,
                   borderBottomWidth: isLast ? 1 : 1,
                   borderBottomLeftRadius: isLast ? 16 : 0,
                   borderBottomRightRadius: isLast ? 16 : 0,
@@ -437,15 +405,15 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
                 <Text style={[styles.td, { color: colors.onSurface, flex: 2 }]} numberOfLines={1}>
                   {stats.student_name}
                 </Text>
-                <Text style={[styles.td, { color: colors.onSurfaceVariant, flex: 0.8, textAlign: 'center' }]}>
+                <Text style={[styles.td, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>
                   {stats.attended}
                 </Text>
-                <Text style={[styles.td, { color: colors.onSurfaceVariant, flex: 0.8, textAlign: 'center' }]}>
+                <Text style={[styles.td, { color: colors.outline, flex: 0.8, textAlign: 'center' }]}>
                   {stats.total_sessions}
                 </Text>
                 <View style={{ flex: 1.2, alignItems: 'flex-end' }}>
-                  <View style={[styles.percentBadge, { backgroundColor: stats.percentage >= 90 ? colors.secondaryContainer : stats.percentage < 10 ? colors.errorContainer : colors.primaryContainer }]}>
-                    <Text style={[styles.percentText, { color: stats.percentage >= 90 ? colors.onSecondaryContainer : stats.percentage < 10 ? colors.onErrorContainer : colors.onPrimaryContainer }]}>
+                  <View style={[styles.percentBadge, { backgroundColor: stats.percentage >= 90 ? '#e6f4ea' : stats.percentage < 50 ? '#fce8e6' : '#fef7e0' }]}>
+                    <Text style={[styles.percentText, { color: stats.percentage >= 90 ? '#006c4b' : stats.percentage < 50 ? '#8b2500' : '#b06000' }]}>
                       {Math.round(stats.percentage)}%
                     </Text>
                   </View>
@@ -478,234 +446,51 @@ const AttendanceSkeleton = ({ colors }: { colors: any }) => (
       />
     </View>
   );
-
 }
 
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-    marginBottom: 12,
-  },
-  skeletonLine: {
-    borderRadius: 4,
-  },
-  skeletonCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  headerContainer: {
-    flexDirection: 'column',
-    marginBottom: 32,
-    gap: 16,
-    ...(Platform.OS === 'web' ? { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } : {}),
-  },
-  headerTitles: {
-    marginBottom: 8,
-  },
-  pageTitle: {
-    fontSize: 36,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  pageSubtitle: {
-    fontSize: 16,
-  },
-  dateControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 4,
-    alignSelf: 'flex-start',
-  },
-  iconButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  dateDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  dateText: {
-    marginLeft: 8,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 32,
-  },
-  listHeader: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 16,
-    marginBottom: 24,
-    ...(Platform.OS === 'web' ? { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } : {}),
-  },
-  listTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  quickActionsCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 32,
-  },
-  quickActionsTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  bulkActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  bulkButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  bulkButtonText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  studentCardsContainer: {
-    marginBottom: 12,
-  },
-  classSelector: {
-    marginBottom: 24,
-    flexDirection: 'row',
-  },
-  classItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    height: 40,
-    justifyContent: 'center',
-  },
-  classItemText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 8,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyStateSub: {
-    fontSize: 14,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 24,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  monthlyCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 24,
-  },
-  monthlyInputRow: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    height: 48,
-    borderRadius: 8,
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  table: {
-    width: '100%',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  th: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  td: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  percentBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  percentText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  contentContainer: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 40 },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, gap: 12, marginBottom: 12 },
+  skeletonLine: { borderRadius: 4 },
+  skeletonCircle: { width: 32, height: 32, borderRadius: 16 },
+  headerContainer: { flexDirection: 'column', marginBottom: 32, gap: 16 },
+  headerTitles: { marginBottom: 8 },
+  pageTitle: { fontSize: 32, fontWeight: '700', marginBottom: 8, letterSpacing: -0.5 },
+  pageSubtitle: { fontSize: 15, fontWeight: '500' },
+  dateControls: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 4, alignSelf: 'flex-start' },
+  iconButton: { padding: 8, borderRadius: 10 },
+  dateDisplay: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, marginHorizontal: 4 },
+  dateText: { marginLeft: 8, fontSize: 13, fontWeight: '700' },
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 32 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  listTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  quickActionsCard: { padding: 16, borderRadius: 20, borderWidth: 1, marginBottom: 32 },
+  quickHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  quickActionsTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  bulkActionsRow: { flexDirection: 'row', gap: 8 },
+  bulkButton: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  bulkButtonText: { fontSize: 10, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase' },
+  studentCardsContainer: { marginBottom: 1 },
+  classSelector: { marginBottom: 24, flexDirection: 'row' },
+  classItem: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, marginRight: 8, height: 44, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
+  classItemText: { fontSize: 13, fontWeight: '700' },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
+  emptyStateText: { fontSize: 16, fontWeight: '600' },
+  viewToggle: { flexDirection: 'row', borderRadius: 14, padding: 4, marginBottom: 24, gap: 4 },
+  toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  toggleText: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  monthlyCard: { borderRadius: 20, borderWidth: 1, padding: 20 },
+  monthlyInputRow: { marginBottom: 20 },
+  inputLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, height: 52, borderRadius: 12, gap: 10 },
+  textInput: { flex: 1, fontSize: 18, fontWeight: '700' },
+  table: { width: '100%' },
+  tableHeader: { flexDirection: 'row', paddingVertical: 14, borderBottomWidth: 1, paddingHorizontal: 20 },
+  th: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18 },
+  td: { fontSize: 14, fontWeight: '600' },
+  percentBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, minWidth: 54, alignItems: 'center' },
+  percentText: { fontSize: 12, fontWeight: '800' },
 });
