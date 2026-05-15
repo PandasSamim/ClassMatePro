@@ -270,6 +270,7 @@ export default function StudentsScreen() {
             <StudentRow
               index={index}
               name={`${s.first_name} ${s.last_name}`}
+              avatarUrl={s.avatar_url}
               dueAmount="₹500"
               onPress={() =>
                 router.push({
