@@ -2,169 +2,210 @@ import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from "react-native-chart-kit";
 import { MaterialIcons } from '@expo/vector-icons';
-import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ClassSeries } from '@/hooks/useDashboard';
 
+const VIBRANT_PALETTE = ['#b5c4ff', '#9ff2cc', '#d3baff', '#ffb594', '#82d3e0', '#ffb77c'];
+const BG_PALETTE = ['#003fb1', '#006c4b', '#5e00cd', '#8b2500', '#006874', '#6e2f00'];
 
 export function FeeCollectionChart({ data = [], delay = 0 }: { data?: ClassSeries[], delay?: number }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  const VIBRANT_PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+  const screenWidth = Dimensions.get('window').width;
 
   const chartData = useMemo(() => {
     if (data.length === 0) return null;
-    
-    // Assuming all series have the same labels in the same order
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const labels = data[0].data.map(p => {
       const monthIdx = parseInt(p.label) - 1;
       return monthNames[monthIdx] || p.label;
     });
-    
     const datasets = data.map((series, index) => ({
       data: series.data.map(p => p.value),
       color: (opacity = 1) => VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
-      strokeWidth: 3,
+      strokeWidth: 2.5,
     }));
-
-    return {
-      labels,
-      datasets,
-    };
+    return { labels, datasets };
   }, [data]);
 
-  const legendItems = useMemo(() => {
-    return data.map((series, index) => ({
+  const legendItems = useMemo(() =>
+    data.map((series, index) => ({
       name: series.className,
       color: VIBRANT_PALETTE[index % VIBRANT_PALETTE.length],
-    }));
-  }, [data]);
+      bg: BG_PALETTE[index % BG_PALETTE.length],
+    })),
+    [data]
+  );
 
   const chartConfig = {
     backgroundColor: 'transparent',
-    backgroundGradientFrom: colors.surfaceContainerLowest,
-    backgroundGradientTo: colors.surfaceContainerLowest,
+    backgroundGradientFrom: '#003fb1',
+    backgroundGradientTo: '#003fb1',
     backgroundGradientFromOpacity: 0,
     backgroundGradientToOpacity: 0,
     decimalPlaces: 0,
-    color: (opacity = 1) => colors.outlineVariant, // for grid lines
-    labelColor: (opacity = 1) => colors.outline, // for labels
-    propsForDots: {
-      r: "4",
-    },
+    color: () => 'rgba(255,255,255,0.12)',
+    labelColor: () => 'rgba(255,255,255,0.5)',
+    propsForDots: { r: '4', strokeWidth: '2', stroke: 'rgba(255,255,255,0.3)' },
     useShadowColorFromDataset: false,
   };
 
   return (
-    <View>
-      <Card style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.titleSection}>
-            <Text style={[styles.title, { color: colors.onSurface }]}>Fee Revenue Analysis</Text>
-            <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>Monthly collection by class</Text>
-          </View>
-          <View style={[styles.iconBadge, { backgroundColor: colors.primaryContainer }]}>
-            <MaterialIcons name="show-chart" size={20} color={colors.onPrimaryContainer} />
-          </View>
+    <View style={styles.outerWrapper}>
+      {/* Card Header */}
+      <View style={styles.cardHeader}>
+        <View style={[styles.headerIconBox, { backgroundColor: '#003fb1' }]}>
+          <MaterialIcons name="show-chart" size={20} color="#b5c4ff" />
         </View>
+        <View style={styles.headerTexts}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Fee Revenue</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.outline }]}>Monthly collection by class</Text>
+        </View>
+      </View>
+
+      {/* Dark Chart Card */}
+      <View style={styles.darkCard}>
+        {/* Glow circles */}
+        <View style={styles.glowTop} />
+        <View style={styles.glowBottom} />
 
         {/* Legend */}
-        <View style={styles.legendContainer}>
-          {legendItems.map((item, index) => (
-            <View key={index} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-              <Text style={[styles.legendText, { color: colors.onSurfaceVariant }]}>{item.name}</Text>
-            </View>
-          ))}
-        </View>
+        {legendItems.length > 0 && (
+          <View style={styles.legendRow}>
+            {legendItems.map((item, i) => (
+              <View key={i} style={[styles.legendChip, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
+                <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                <Text style={styles.legendText}>{item.name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-        <View style={styles.chartWrapper}>
+        {/* Chart */}
+        <View style={styles.chartWrap}>
           {chartData && chartData.datasets.length > 0 ? (
             <LineChart
               data={chartData}
-              width={Dimensions.get('window').width - 90}
-              height={180}
+              width={screenWidth - 56}
+              height={190}
               yAxisLabel="₹"
               yAxisSuffix=""
               chartConfig={chartConfig}
               bezier
-              style={{
-                marginLeft: -10,
-                borderRadius: 16
-              }}
-              fromZero={true}
+              style={{ marginLeft: -12, borderRadius: 0 }}
+              fromZero
+              withInnerLines={false}
+              withOuterLines={false}
+              withShadow={false}
             />
           ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={{ color: colors.onSurfaceVariant }}>No collection data for this period</Text>
+            <View style={styles.emptyChart}>
+              <MaterialIcons name="bar-chart" size={40} color="rgba(255,255,255,0.2)" />
+              <Text style={styles.emptyText}>No data for this period</Text>
             </View>
           )}
         </View>
-      </Card>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    marginBottom: 24,
-    borderRadius: 24,
+  outerWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 20,
   },
-  header: {
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 14,
+    marginBottom: 14,
+    paddingHorizontal: 4,
   },
-  titleSection: {
-    flex: 1,
+  headerIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
+  headerTexts: { flex: 1 },
+  cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  subtitle: {
+  cardSubtitle: {
     fontSize: 12,
+    fontWeight: '500',
     marginTop: 2,
   },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+  darkCard: {
+    backgroundColor: '#003fb1',
+    borderRadius: 28,
+    padding: 20,
+    overflow: 'hidden',
+    shadowColor: '#003fb1',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  legendContainer: {
+  glowTop: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(181,196,255,0.1)',
+    top: -60,
+    right: -40,
+  },
+  glowBottom: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(0,63,177,0.3)',
+    bottom: -30,
+    left: -20,
+  },
+  legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 16,
   },
-  legendItem: {
+  legendChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   legendDot: {
-    width: 8, height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
   },
   legendText: {
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     fontWeight: '600',
   },
-  chartWrapper: {
-    marginTop: 10,
+  chartWrap: {
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  emptyContainer: {
-    height: 180,
-    justifyContent: 'center',
+  emptyChart: {
+    height: 190,
     alignItems: 'center',
-  }
+    justifyContent: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });

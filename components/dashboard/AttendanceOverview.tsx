@@ -1,33 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Card } from '@/components/ui/Card';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-
-interface ProgressBarProps {
-  label: string;
-  percentage: number;
-  color: string;
-}
-
-function ProgressBar({ label, percentage, color }: ProgressBarProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-
-  return (
-    <View style={styles.progressItem}>
-      <View style={styles.progressHeader}>
-        <Text style={[styles.progressLabel, { color: colors.onSurface }]}>{label}</Text>
-        <Text style={[styles.progressValue, { color }]}>{percentage}%</Text>
-      </View>
-      <View style={[styles.progressBarBackground, { backgroundColor: colors.surfaceVariant }]}>
-        <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-  );
-}
+const ROW_PALETTES = [
+  { bg: '#003fb1', bar: '#b5c4ff' },
+  { bg: '#006c4b', bar: '#9ff2cc' },
+  { bg: '#5e00cd', bar: '#d3baff' },
+  { bg: '#8b2500', bar: '#ffb594' },
+  { bg: '#006874', bar: '#82d3e0' },
+];
 
 export interface AttendanceBreakdown {
   grade: string;
@@ -43,122 +26,202 @@ export function AttendanceOverview({ data, delay = 0 }: AttendanceOverviewProps)
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return colors.secondary;
-    if (percentage >= 80) return colors.primaryContainer;
-    return colors.error;
+  const getStatusIcon = (pct: number) => {
+    if (pct >= 90) return { icon: 'check-circle' as const, color: '#9ff2cc', bg: '#006c4b' };
+    if (pct >= 75) return { icon: 'warning' as const, color: '#ffb594', bg: '#8b2500' };
+    return { icon: 'cancel' as const, color: '#ffdad6', bg: '#ba1a1a' };
   };
 
   return (
-    <View>
-      <Card style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: colors.onSurface }]}>Attendance Overview</Text>
+    <View style={styles.outerWrapper}>
+      {/* Card Header */}
+      <View style={styles.cardHeader}>
+        <View style={[styles.headerIconBox, { backgroundColor: '#006c4b' }]}>
+          <MaterialIcons name="event-available" size={20} color="#9ff2cc" />
         </View>
-        <View style={[styles.iconBadge, { backgroundColor: '#10b981' }]}>
-          <MaterialIcons name="event-available" size={20} color="white" />
+        <View style={styles.headerTexts}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Attendance</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.outline }]}>Class-wise performance</Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        {data.length > 0 ? data.map((item, index) => (
-          <ProgressBar 
-            key={index}
-            label={item.grade} 
-            percentage={Math.round(item.percentage)} 
-            color={getProgressColor(item.percentage)} 
-          />
-        )) : (
-          <Text style={{ color: colors.onSurfaceVariant }}>No attendance data available.</Text>
+      {/* Dark Card */}
+      <View style={[styles.darkCard, { backgroundColor: '#006c4b' }]}>
+        <View style={styles.glowTop} />
+
+        {data.length > 0 ? data.map((item, index) => {
+          const pal = ROW_PALETTES[index % ROW_PALETTES.length];
+          const status = getStatusIcon(item.percentage);
+          return (
+            <View key={index} style={styles.attendanceRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.classDot, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                  <Text style={styles.classDotText}>{item.grade.charAt(0)}</Text>
+                </View>
+                <Text style={styles.gradeLabel} numberOfLines={1}>{item.grade}</Text>
+              </View>
+
+              <View style={styles.barSection}>
+                <View style={styles.barBg}>
+                  <View style={[styles.barFill, { width: `${Math.min(item.percentage, 100)}%`, backgroundColor: pal.bar }]} />
+                </View>
+                <Text style={styles.pctText}>{Math.round(item.percentage)}%</Text>
+              </View>
+
+              <View style={[styles.statusDot, { backgroundColor: status.bg }]}>
+                <MaterialIcons name={status.icon} size={14} color={status.color} />
+              </View>
+            </View>
+          );
+        }) : (
+          <View style={styles.emptyBox}>
+            <MaterialIcons name="event-busy" size={36} color="rgba(255,255,255,0.2)" />
+            <Text style={styles.emptyText}>No attendance data available.</Text>
+          </View>
         )}
 
-        <View style={[
-          styles.infoBox, 
-          { 
-            backgroundColor: `${colors.secondaryContainer}33`, // 20% opacity
-            borderColor: colors.secondaryContainer 
-          }
-        ]}>
-          <MaterialIcons name="info" size={20} color={colors.secondary} style={styles.infoIcon} />
-          <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
-            Overall attendance is above the 90% institutional target.
-          </Text>
+        {/* Info Footer */}
+        <View style={styles.infoFooter}>
+          <MaterialIcons name="info-outline" size={14} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.infoText}>90% is the institutional attendance target</Text>
         </View>
       </View>
-    </Card>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
+  outerWrapper: {
+    marginHorizontal: 16,
     marginBottom: 24,
-    flexDirection: 'column',
   },
-  header: {
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    gap: 14,
+    marginBottom: 14,
+    paddingHorizontal: 4,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  iconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  content: {
-    gap: 24,
+  headerTexts: { flex: 1 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  progressItem: {
-    width: '100%',
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  progressLabel: {
+  cardSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  progressValue: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  progressBarBackground: {
-    height: 8,
-    width: '100%',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  infoBox: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  infoIcon: {
+    fontWeight: '500',
     marginTop: 2,
   },
-  infoText: {
+  darkCard: {
+    borderRadius: 28,
+    padding: 20,
+    overflow: 'hidden',
+    shadowColor: '#006c4b',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+    gap: 14,
+  },
+  glowTop: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(159,242,204,0.08)',
+    top: -50,
+    right: -30,
+  },
+  attendanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: 110,
+  },
+  classDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  classDotText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  gradeLabel: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+  },
+  barSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  barBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  pctText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '800',
+    width: 40,
+    textAlign: 'right',
+  },
+  statusDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  infoFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    marginTop: 4,
+  },
+  infoText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
