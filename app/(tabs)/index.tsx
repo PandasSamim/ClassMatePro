@@ -11,9 +11,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, InteractionManager, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState, useEffect } from 'react';
+import { ActivityIndicator, Alert, InteractionManager, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import Animated, { useSharedValue, withSpring, useAnimatedProps } from 'react-native-reanimated';
 
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
 
@@ -26,6 +28,24 @@ function DashboardScreen() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { metrics, chartData, attendanceBreakdown, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
   const { settings } = useGlobalSettings();
+
+  // Counting animations
+  const collectedAnim = useSharedValue(0);
+  const duesAnim = useSharedValue(0);
+  const studentsAnim = useSharedValue(0);
+  const attendanceAnim = useSharedValue(0);
+
+  useEffect(() => {
+    collectedAnim.value = withSpring(metrics?.totalFeesCollected || 0, { damping: 15, stiffness: 100 });
+    duesAnim.value = withSpring(metrics?.totalDues || 0, { damping: 15, stiffness: 100 });
+    studentsAnim.value = withSpring(metrics?.totalStudents || 0, { damping: 15, stiffness: 100 });
+    attendanceAnim.value = withSpring(metrics?.attendancePercentage || 0, { damping: 15, stiffness: 100 });
+  }, [metrics]);
+
+  const collectedProps = useAnimatedProps(() => ({ text: `₹${Math.round(collectedAnim.value).toLocaleString()}`, defaultValue: `₹${Math.round(collectedAnim.value).toLocaleString()}` } as any));
+  const duesProps = useAnimatedProps(() => ({ text: `₹${Math.round(duesAnim.value).toLocaleString()}`, defaultValue: `₹${Math.round(duesAnim.value).toLocaleString()}` } as any));
+  const studentsProps = useAnimatedProps(() => ({ text: `${Math.round(studentsAnim.value)}`, defaultValue: `${Math.round(studentsAnim.value)}` } as any));
+  const attendanceProps = useAnimatedProps(() => ({ text: `${attendanceAnim.value.toFixed(1)}%`, defaultValue: `${attendanceAnim.value.toFixed(1)}%` } as any));
 
   useFocusEffect(
     useCallback(() => {
@@ -403,7 +423,12 @@ function DashboardScreen() {
               <MaterialIcons name="account-balance-wallet" size={22} color="#b5c4ff" />
             </View>
             <View>
-              <Text style={styles.tileValue}>₹{metrics.totalFeesCollected.toLocaleString()}</Text>
+              <AnimatedTextInput
+                underlineColorAndroid="transparent"
+                editable={false}
+                style={styles.tileValue}
+                animatedProps={collectedProps}
+              />
               <Text style={styles.tileLabel}>COLLECTED</Text>
             </View>
           </View>
@@ -414,7 +439,12 @@ function DashboardScreen() {
               <MaterialIcons name="warning" size={22} color="#ffb594" />
             </View>
             <View>
-              <Text style={styles.tileValue}>₹{metrics.totalDues.toLocaleString()}</Text>
+              <AnimatedTextInput
+                underlineColorAndroid="transparent"
+                editable={false}
+                style={styles.tileValue}
+                animatedProps={duesProps}
+              />
               <Text style={styles.tileLabel}>DUES</Text>
             </View>
           </View>
@@ -425,7 +455,12 @@ function DashboardScreen() {
               <MaterialIcons name="groups" size={22} color="#d3baff" />
             </View>
             <View>
-              <Text style={styles.tileValue}>{metrics.totalStudents}</Text>
+              <AnimatedTextInput
+                underlineColorAndroid="transparent"
+                editable={false}
+                style={styles.tileValue}
+                animatedProps={studentsProps}
+              />
               <Text style={styles.tileLabel}>STUDENTS</Text>
             </View>
           </View>
@@ -436,7 +471,12 @@ function DashboardScreen() {
               <MaterialIcons name="check-circle" size={22} color="#9ff2cc" />
             </View>
             <View>
-              <Text style={styles.tileValue}>{metrics.attendancePercentage.toFixed(1)}%</Text>
+              <AnimatedTextInput
+                underlineColorAndroid="transparent"
+                editable={false}
+                style={styles.tileValue}
+                animatedProps={attendanceProps}
+              />
               <Text style={styles.tileLabel}>ATTENDANCE</Text>
             </View>
           </View>
