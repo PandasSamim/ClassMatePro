@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Platform, StatusBar, Alert, ActivityIndicator, InteractionManager } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { FeeCollectionChart } from '@/components/dashboard/FeeCollectionChart';
 import { AttendanceOverview } from '@/components/dashboard/AttendanceOverview';
+import { FeeCollectionChart } from '@/components/dashboard/FeeCollectionChart';
 import { FilterModal } from '@/components/dashboard/FilterModal';
-import { useDashboard } from '@/hooks/useDashboard';
-import { useFocusEffect } from 'expo-router';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import * as Print from 'expo-print';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { Colors } from '@/constants/theme';
 import { useGlobalSettings } from '@/context/SettingsContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useDashboard } from '@/hooks/useDashboard';
+import { MaterialIcons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Print from 'expo-print';
+import { useFocusEffect } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, InteractionManager, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
@@ -21,13 +20,13 @@ import { TopNavbar } from '@/components/dashboard/TopNavbar';
 function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
+
   const [isFilterVisible, setFilterVisible] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<{year: number, month: number} | null>(null);
+  const [activeFilter, setActiveFilter] = useState<{ year: number, month: number } | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { metrics, chartData, attendanceBreakdown, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
   const { settings } = useGlobalSettings();
- 
+
   useFocusEffect(
     useCallback(() => {
       const task = InteractionManager.runAfterInteractions(() => {
@@ -36,7 +35,7 @@ function DashboardScreen() {
       return () => task.cancel();
     }, [fetchMetrics, activeFilter])
   );
- 
+
   const handleApplyFilter = (year: number | undefined, month: number | undefined) => {
     if (year === undefined || month === undefined) {
       setActiveFilter(null);
@@ -46,12 +45,12 @@ function DashboardScreen() {
       fetchMetrics(undefined, year, month);
     }
   };
- 
+
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const filterLabel = activeFilter 
+  const filterLabel = activeFilter
     ? `${monthNames[activeFilter.month - 1]} ${activeFilter.year}`
     : 'All Time';
- 
+
   const handleDownloadReport = async () => {
     if (isGeneratingPdf) return;
     try {
@@ -272,7 +271,7 @@ function DashboardScreen() {
               totalsByLabel[p.label] = (totalsByLabel[p.label] || 0) + p.value;
             });
           });
-          
+
           const labels = Object.keys(totalsByLabel);
           const maxVal = Math.max(...Object.values(totalsByLabel), 1);
           const monthMap: Record<string, string> = {
@@ -280,7 +279,7 @@ function DashboardScreen() {
             '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
             '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
           };
-          
+
           return labels.map(label => `
             <div class="bar-group">
               <div class="bar-label">₹${(totalsByLabel[label] / 1000).toFixed(1)}k</div>
@@ -330,11 +329,11 @@ function DashboardScreen() {
       `;
 
       const { uri } = await Print.printToFileAsync({ html });
-      
+
       // Rename the file to something meaningful
       const fileName = `ClassMatePro_Report_${filterLabel.replace(/\s+/g, '_')}.pdf`;
       const finalUri = `${FileSystem.cacheDirectory}${fileName}`;
-      
+
       await FileSystem.copyAsync({
         from: uri,
         to: finalUri
@@ -358,18 +357,18 @@ function DashboardScreen() {
       <TopNavbar />
 
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        
-        <View 
+
+        <View
           style={styles.pageHeader}
         >
           <Text style={[styles.pageTitle, { color: colors.onSurface }]}>Dashboard Overview</Text>
           <Text style={[styles.pageSubtitle, { color: colors.onSurfaceVariant }]}>Monitor key academic and financial metrics.</Text>
         </View>
 
-        <View 
+        <View
           style={styles.filtersRow}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.datePicker, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}
             onPress={() => setFilterVisible(true)}
           >
@@ -380,7 +379,7 @@ function DashboardScreen() {
             <MaterialIcons name="expand-more" size={20} color={colors.onSurface} />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.reportButton, { backgroundColor: colors.primaryContainer, opacity: isGeneratingPdf ? 0.6 : 1 }]}
             onPress={handleDownloadReport}
             disabled={isGeneratingPdf}
@@ -396,74 +395,65 @@ function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.cardsContainer}>
-          <View style={styles.metricWrapper}>
-            <MetricCard 
-              label="COLLECTED"
-              value={`₹${metrics.totalFeesCollected.toLocaleString()}`}
-              iconName="account-balance-wallet"
-              iconBgColor={colors.primaryFixed}
-              iconColor={colors.onPrimaryFixed}
-              trendIcon="trending-up"
-              trendText="Total"
-              trendColor={colors.secondary}
-            />
+        {/* ── Metric Strip ────────────────────────────── */}
+        <View style={styles.metricsStrip}>
+          <View style={[styles.metricTile, { backgroundColor: '#003fb1', overflow: 'hidden' }]}>
+            <View style={[styles.tileGlow, { backgroundColor: '#b5c4ff' }]} />
+            <View style={[styles.metricIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <MaterialIcons name="account-balance-wallet" size={22} color="#b5c4ff" />
+            </View>
+            <View>
+              <Text style={styles.tileValue}>₹{metrics.totalFeesCollected.toLocaleString()}</Text>
+              <Text style={styles.tileLabel}>COLLECTED</Text>
+            </View>
           </View>
 
-          <View style={styles.metricWrapper}>
-            <MetricCard 
-              label="DUES"
-              value={`₹${metrics.totalDues.toLocaleString()}`}
-              iconName="warning"
-              iconBgColor={colors.errorContainer}
-              iconColor={colors.onErrorContainer}
-              trendIcon="warning"
-              trendText={`${metrics.totalDues > 0 ? 'Pending' : 'No dues'}`}
-              trendColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-              topBorderColor={metrics.totalDues > 0 ? colors.error : colors.secondary}
-            />
+          <View style={[styles.metricTile, { backgroundColor: '#8b2500', overflow: 'hidden' }]}>
+            <View style={[styles.tileGlow, { backgroundColor: '#ffb594' }]} />
+            <View style={[styles.metricIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <MaterialIcons name="warning" size={22} color="#ffb594" />
+            </View>
+            <View>
+              <Text style={styles.tileValue}>₹{metrics.totalDues.toLocaleString()}</Text>
+              <Text style={styles.tileLabel}>DUES</Text>
+            </View>
           </View>
 
-          <View style={styles.metricWrapper}>
-            <MetricCard 
-              label="STUDENTS"
-              value={metrics.totalStudents.toString()}
-              iconName="groups"
-              iconBgColor={colors.tertiaryContainer}
-              iconColor={colors.onTertiaryContainer}
-              trendIcon="sync"
-              trendText="Total"
-              trendColor={colors.secondary}
-            />
+          <View style={[styles.metricTile, { backgroundColor: '#5e00cd', overflow: 'hidden' }]}>
+            <View style={[styles.tileGlow, { backgroundColor: '#d3baff' }]} />
+            <View style={[styles.metricIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <MaterialIcons name="groups" size={22} color="#d3baff" />
+            </View>
+            <View>
+              <Text style={styles.tileValue}>{metrics.totalStudents}</Text>
+              <Text style={styles.tileLabel}>STUDENTS</Text>
+            </View>
           </View>
 
-          <View style={styles.metricWrapper}>
-            <MetricCard 
-              label="ATTENDANCE"
-              value={`${metrics.attendancePercentage.toFixed(1)}%`}
-              iconName="check-circle"
-              iconBgColor={colors.secondaryContainer}
-              iconColor={colors.onSecondaryContainer}
-              trendIcon="info"
-              trendText="Current"
-              trendColor={colors.outline}
-              topBorderColor={colors.secondary}
-            />
+          <View style={[styles.metricTile, { backgroundColor: '#006c4b', overflow: 'hidden' }]}>
+            <View style={[styles.tileGlow, { backgroundColor: '#9ff2cc' }]} />
+            <View style={[styles.metricIcon, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <MaterialIcons name="check-circle" size={22} color="#9ff2cc" />
+            </View>
+            <View>
+              <Text style={styles.tileValue}>{metrics.attendancePercentage.toFixed(1)}%</Text>
+              <Text style={styles.tileLabel}>ATTENDANCE</Text>
+            </View>
           </View>
         </View>
 
-        <FeeCollectionChart 
-          data={chartData} 
+        <FeeCollectionChart
+          data={chartData}
         />
 
         <AttendanceOverview data={attendanceBreakdown} />
-        
-        <View style={{height: 40}} />
+
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      <FilterModal 
-        visible={isFilterVisible} 
-        onClose={() => setFilterVisible(false)} 
+      <FilterModal
+        visible={isFilterVisible}
+        onClose={() => setFilterVisible(false)}
         onApply={handleApplyFilter}
         initialYear={activeFilter?.year.toString()}
         initialMonth={activeFilter?.month.toString()}
@@ -565,5 +555,54 @@ const styles = StyleSheet.create({
   },
   metricWrapper: {
     width: '48.5%',
+  },
+  metricsStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  metricTile: {
+    width: '47%',
+    height: 140,
+    borderRadius: 24,
+    padding: 18,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  tileGlow: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    top: -20,
+    right: -20,
+    opacity: 0.15,
+  },
+  metricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileValue: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  tileLabel: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });
