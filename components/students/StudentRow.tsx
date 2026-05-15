@@ -20,6 +20,7 @@ interface StudentRowProps {
   onPress?: () => void;
   onMorePress?: () => void;
   onDelete?: () => void;
+  index?: number;
 }
 
 export function StudentRow({ 
