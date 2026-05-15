@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 
 export interface DashboardMetrics {
@@ -24,6 +24,14 @@ export interface AttendanceBreakdown {
   percentage: number;
 }
 
+export interface StudentAttendance {
+  id: number;
+  name: string;
+  className: string;
+  percentage: number;
+  avatar_url?: string;
+}
+
 export const useDashboard = () => {
   const db = useSQLiteContext();
   const [metrics, setMetrics] = useState<DashboardMetrics>({
@@ -34,6 +42,7 @@ export const useDashboard = () => {
   });
   const [chartData, setChartData] = useState<ClassSeries[]>([]);
   const [attendanceBreakdown, setAttendanceBreakdown] = useState<AttendanceBreakdown[]>([]);
+  const [studentLeaderboard, setStudentLeaderboard] = useState<StudentAttendance[]>([]);
   
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [loadingCharts, setLoadingCharts] = useState(false);
@@ -122,18 +131,53 @@ export const useDashboard = () => {
   const fetchAttendanceBreakdown = useCallback(async () => {
     setLoadingAttendance(true);
     try {
-      const breakdownResult = await db.getAllAsync<AttendanceBreakdown>(`
-        SELECT 
-          c.name as grade,
-          (SUM(CASE WHEN LOWER(a.status) = 'present' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) as percentage
-        FROM attendance a
-        JOIN students s ON a.student_id = s.id
-        JOIN classes c ON s.class_id = c.id
-        WHERE a.date >= date('now', '-30 days') AND LOWER(a.status) != 'dayoff'
-        GROUP BY c.id
-        ORDER BY percentage DESC
-      `);
-      setAttendanceBreakdown(breakdownResult);
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const sessionRows = await db.getAllAsync<{ class_id: number; total_expected: number }>(
+        `SELECT class_id, total_expected FROM class_sessions WHERE month = ?`,
+        [currentMonth]
+      );
+      const sessionMap: Record<number, number> = {};
+      sessionRows.forEach(r => { sessionMap[r.class_id] = r.total_expected; });
+
+      const presentRows = await db.getAllAsync<{ class_id: number; class_name: string; present_count: number; date_count: number }>(
+        `SELECT 
+           c.id as class_id,
+           c.name as class_name,
+           SUM(CASE WHEN LOWER(a.status) = 'present' THEN 1 ELSE 0 END) as present_count,
+           COUNT(DISTINCT a.date) as date_count
+         FROM attendance a
+         JOIN students s ON a.student_id = s.id
+         JOIN classes c ON s.class_id = c.id
+         WHERE strftime('%Y-%m', a.date) = ?
+         GROUP BY c.id`,
+        [currentMonth]
+      );
+
+      const breakdown = presentRows.map(row => {
+        const expectedSessions = sessionMap[row.class_id] || row.date_count || 1;
+        return {
+          grade: row.class_name,
+          percentage: Math.min((row.present_count / (expectedSessions || 1)) * 100, 100),
+        };
+      });
+
+      if (breakdown.length === 0) {
+        const fallback = await db.getAllAsync<{ grade: string; percentage: number }>(
+          `SELECT 
+             c.name as grade,
+             (SUM(CASE WHEN LOWER(a.status) = 'present' THEN 1 ELSE 0 END) * 100.0 /
+              NULLIF(COUNT(*), 0)) as percentage
+           FROM attendance a
+           JOIN students s ON a.student_id = s.id
+           JOIN classes c ON s.class_id = c.id
+           WHERE a.date >= date('now', '-30 days') AND LOWER(a.status) != 'dayoff'
+           GROUP BY c.id
+           ORDER BY percentage DESC`
+        );
+        setAttendanceBreakdown(fallback);
+      } else {
+        setAttendanceBreakdown(breakdown);
+      }
     } catch (error) {
       console.error('Failed to fetch attendance breakdown:', error);
     } finally {
@@ -141,22 +185,48 @@ export const useDashboard = () => {
     }
   }, [db]);
 
+  const fetchStudentLeaderboard = useCallback(async () => {
+    try {
+      const result = await db.getAllAsync<StudentAttendance>(`
+        SELECT 
+          s.id,
+          s.first_name || ' ' || s.last_name as name,
+          c.name as className,
+          s.avatar_url,
+          (SUM(CASE WHEN LOWER(a.status) = 'present' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) as percentage
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        JOIN classes c ON s.class_id = c.id
+        WHERE a.date >= date('now', '-30 days') AND LOWER(a.status) != 'dayoff'
+        GROUP BY s.id
+        ORDER BY percentage DESC, name ASC
+        LIMIT 10
+      `);
+      setStudentLeaderboard(result);
+    } catch (error) {
+      console.error('Failed to fetch student leaderboard:', error);
+    }
+  }, [db]);
+
   const fetchMetrics = useCallback(async (range: string = '90d', year?: number, month?: number) => {
     await fetchBaseMetrics(year, month);
     fetchChartData(year, month);
     fetchAttendanceBreakdown();
-  }, [fetchBaseMetrics, fetchChartData, fetchAttendanceBreakdown]);
+    fetchStudentLeaderboard();
+  }, [fetchBaseMetrics, fetchChartData, fetchAttendanceBreakdown, fetchStudentLeaderboard]);
 
   return {
     metrics,
     chartData,
     attendanceBreakdown,
+    studentLeaderboard,
     loadingMetrics,
     loadingCharts,
     loadingAttendance,
     fetchMetrics,
     fetchBaseMetrics,
     fetchChartData,
-    fetchAttendanceBreakdown
+    fetchAttendanceBreakdown,
+    fetchStudentLeaderboard
   };
 };

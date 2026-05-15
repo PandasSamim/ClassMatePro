@@ -1,5 +1,5 @@
-import { AttendanceOverview } from '@/components/dashboard/AttendanceOverview';
 import { FeeCollectionChart } from '@/components/dashboard/FeeCollectionChart';
+import { StudentAttendanceLeaderboard } from '@/components/dashboard/StudentAttendanceLeaderboard';
 import { FilterModal } from '@/components/dashboard/FilterModal';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { Colors } from '@/constants/theme';
@@ -26,7 +26,7 @@ function DashboardScreen() {
   const [isFilterVisible, setFilterVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState<{ year: number, month: number } | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const { metrics, chartData, attendanceBreakdown, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
+  const { metrics, chartData, attendanceBreakdown, studentLeaderboard, fetchMetrics, loadingMetrics, loadingCharts, loadingAttendance } = useDashboard();
   const { settings } = useGlobalSettings();
 
   // Counting animations
@@ -486,7 +486,7 @@ function DashboardScreen() {
           data={chartData}
         />
 
-        <AttendanceOverview data={attendanceBreakdown} />
+        <StudentAttendanceLeaderboard data={studentLeaderboard} />
 
         <View style={{ height: 40 }} />
       </ScrollView>
